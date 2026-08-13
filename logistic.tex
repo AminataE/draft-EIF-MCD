@@ -1,0 +1,433 @@
+% =====================================================================
+% Full derivation of IF(q_r) for ridge-penalized logistic regression
+% in the MCD setting, with every object defined, the zero-mean check,
+% and the practical algorithm.
+%
+% Self-contained preamble: compiles alone. All macros of the companion
+% paper are redefined here, so the notation matches and nothing breaks
+% if the section is pasted into the main file (delete the preamble then).
+% =====================================================================
+
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage{mathtools}
+\usepackage{hyperref}
+\usepackage[round]{natbib}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem*{remark}{Remark}
+\newtheorem*{assumption}{Assumption}
+
+% --- macros of the companion paper -----------------------------------
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\Eb}{\mathbb{E}}
+\newcommand{\Tset}{\mathcal{T}}
+\newcommand{\Xset}{\mathcal{X}}
+\newcommand{\IF}{\mathrm{IF}}
+\newcommand{\Hb}{\mathcal{H}}
+\newcommand{\Dz}{\mathcal{D}_Z}
+% ---------------------------------------------------------------------
+
+\newtcolorbox{keyresult}[1][]{
+  colback=blue!4, colframe=blue!45!black, boxrule=0.4pt,
+  arc=1mm, left=6pt, right=6pt, top=4pt, bottom=4pt, #1
+}
+
+\begin{document}
+
+\section{The influence function of a ridge-penalized logistic classifier}
+\label{sec:if-logistic}
+
+This section derives $\IF(o;q_r,F)$ in full for a ridge-penalized logistic
+classifier, defines every object it uses, verifies the result against the zero-mean
+property that every influence function must satisfy, and gives the algorithm that
+computes it. The same formulas serve the multilayer perceptron and CatBoost once
+their representation is frozen, since both are logistic models on a learned feature
+map; only $\phi$ changes.
+
+\subsection{Objects and definitions}
+\label{sec:objects}
+
+\paragraph{The augmented sample.}
+The MCD construction turns conditional density estimation into binary classification.
+The augmented observation is $W=(T,X,Y,Z)$: with probability $r\in(0,1)$ the triple
+$(T,X,Y)$ is a real observation, labeled $Z=1$; with probability $1-r$ it is
+contrastive, $(T,X,Y')$ with $Y'$ drawn from the marginal $f_Y$ independently of
+$(T,X)$, labeled $Z=0$. Write
+\[
+P_1(F) := F_{TXY} \quad\text{(the real law)},
+\qquad
+P_0(F) := F_{TX}\otimes F_Y \quad\text{(the contrastive law)},
+\]
+and let $\Eb_{P_r}:=r\,\Eb_{P_1}+(1-r)\,\Eb_{P_0}$ denote expectation under the
+augmented mixture. The structural fact that drives the whole derivation is that
+$P_0(F)$ is itself a functional of $F$, built from two of its marginals: perturbing
+$F$ moves the contrastive class as well as the real one.
+
+\paragraph{The link.}
+The logistic sigmoid $\sigma:\mathbb{R}\to(0,1)$ is
+\[
+\sigma(u)=\frac{1}{1+e^{-u}},
+\qquad
+\sigma'(u)=\sigma(u)\big(1-\sigma(u)\big).
+\]
+
+\paragraph{The feature map.}
+$\phi:\Tset\times\Xset\times\mathbb{R}\to\mathbb{R}^k$ maps a raw input to a vector of
+$k$ numbers. For an ordinary logistic model it is a fixed basis, for instance
+$\phi(t,x,y)=(1,t^\top,x^\top,y,\text{interactions})^\top$; for a frozen network it is
+the penultimate-layer activation; for a frozen boosted ensemble it is the
+concatenated leaf-indicator vector. What matters here is only that $\phi$ is fixed and
+known, not estimated from the fold on which we differentiate.
+
+\paragraph{The model, the loss, the criterion.}
+With the logit $s:=\beta^\top\phi(w)$,
+\[
+q_\beta(w) := \sigma\big(\beta^\top\phi(w)\big),
+\qquad
+\ell(z,q) := -z\log q-(1-z)\log(1-q),
+\]
+the cross-entropy. The population criterion and its minimizer, the estimand, are
+\begin{equation}
+M_\lambda(\beta;F)
+= r\,\Eb_{P_1}\big[\ell(1,q_\beta)\big]
++ (1-r)\,\Eb_{P_0}\big[\ell(0,q_\beta)\big]
++ \lambda\|\beta\|_2^2,
+\qquad
+\beta_\lambda(F)=\arg\min_{\beta\in\mathbb{R}^k} M_\lambda(\beta;F).
+\label{eq:criterion}
+\end{equation}
+The classical unpenalized fit is the case $\lambda=0$.
+
+\subsection{Gradient and Hessian of the loss}
+\label{sec:grads}
+
+Differentiating $\ell$ in its second argument,
+\[
+\frac{\partial\ell}{\partial q}
+= -\frac{z}{q}+\frac{1-z}{1-q}
+= \frac{-z(1-q)+(1-z)q}{q(1-q)}
+= \frac{q-z}{q(1-q)},
+\]
+and differentiating the model in $\beta$, using $\sigma'=\sigma(1-\sigma)$,
+\begin{equation}
+\nabla_\beta q_\beta = \sigma'(s)\,\nabla_\beta s = q_\beta(1-q_\beta)\,\phi.
+\label{eq:grad-q}
+\end{equation}
+The chain rule gives the classical cancellation of the canonical link,
+\begin{equation}
+\nabla_\beta\,\ell\big(z,q_\beta\big)
+= \frac{q_\beta-z}{q_\beta(1-q_\beta)}\cdot q_\beta(1-q_\beta)\,\phi
+= \big(q_\beta-z\big)\,\phi,
+\label{eq:grad-loss}
+\end{equation}
+so the two per-label gradients are
+\begin{equation}
+u_\beta := \nabla_\beta\ell(1,q_\beta) = (q_\beta-1)\,\phi,
+\qquad
+v_\beta := \nabla_\beta\ell(0,q_\beta) = q_\beta\,\phi.
+\label{eq:uv}
+\end{equation}
+Differentiating once more, and using~\eqref{eq:grad-q},
+\[
+\nabla_\beta u_\beta = \phi\,(\nabla_\beta q_\beta)^\top = q_\beta(1-q_\beta)\,\phi\phi^\top
+= \nabla_\beta v_\beta,
+\]
+so both labels contribute the same second derivative and the two expectations merge
+into a single one under the mixture:
+\begin{equation}
+\Hb_\lambda := \nabla^2_\beta M_\lambda
+= \Eb_{P_r}\big[q_\beta(1-q_\beta)\,\phi\phi^\top\big] + 2\lambda I_k.
+\label{eq:hessian}
+\end{equation}
+Each $\phi\phi^\top$ is positive semidefinite and the weight $q(1-q)$ is strictly
+positive, so the expectation is positive semidefinite; adding $2\lambda I_k$ makes
+$\Hb_\lambda$ positive definite with all eigenvalues at least $2\lambda>0$. It is
+therefore invertible and well conditioned, uniformly in the sample. For $\lambda=0$
+invertibility requires only that $\phi$ exhibit no perfect collinearity on the
+support.
+
+The first-order condition characterizing $\beta_\lambda(F)$ is
+\begin{equation}
+G_\lambda(\beta;F) := \nabla_\beta M_\lambda
+= r\,\Eb_{P_1}[u_\beta] + (1-r)\,\Eb_{P_0}[v_\beta] + 2\lambda\beta = 0,
+\label{eq:foc}
+\end{equation}
+which we use twice below, once to simplify and once to check.
+
+\subsection{Perturbing the augmented law}
+\label{sec:perturb}
+
+Let $F_\varepsilon=(1-\varepsilon)F+\varepsilon\delta_o$ with $o=(y_o,t_o,x_o)$. By
+definition $\beta_\lambda(F_\varepsilon)$ solves
+$G_\lambda(\beta_\lambda(F_\varepsilon);F_\varepsilon)=0$ identically in $\varepsilon$.
+Differentiating this identity at $\varepsilon=0$ and applying the implicit function
+theorem, legitimate because $\Hb_\lambda$ is nonsingular,
+\begin{equation}
+\Hb_\lambda\cdot\IF(o;\beta_\lambda,F) + D(o;\beta) = 0,
+\qquad
+D(o;\beta):=\frac{\partial}{\partial\varepsilon}G_\lambda(\beta;F_\varepsilon)\Big|_{\varepsilon=0},
+\label{eq:ift}
+\end{equation}
+so that $\IF(o;\beta_\lambda,F)=-\Hb_\lambda^{-1}D(o;\beta)$. It remains to compute
+$D$, that is, to differentiate the two expectations in~\eqref{eq:foc} at frozen
+$\beta$.
+
+\paragraph{The real channel.}
+Since $P_1(F_\varepsilon)=F_\varepsilon$ and
+$\Eb_{F_\varepsilon}[h]=(1-\varepsilon)\Eb_F[h]+\varepsilon\,h(o)$ is affine in
+$\varepsilon$,
+\begin{equation}
+\frac{\partial}{\partial\varepsilon}\Eb_{P_1(F_\varepsilon)}[u_\beta]\Big|_{0}
+= u_\beta(t_o,x_o,y_o) - \Eb_{P_1}[u_\beta].
+\label{eq:channel1}
+\end{equation}
+
+\paragraph{The contrastive channels.}
+The perturbed marginals are
+$F_{TX,\varepsilon}=(1-\varepsilon)F_{TX}+\varepsilon\delta_{(t_o,x_o)}$ and
+$F_{Y,\varepsilon}=(1-\varepsilon)F_Y+\varepsilon\delta_{y_o}$, and
+$P_0(F_\varepsilon)=F_{TX,\varepsilon}\otimes F_{Y,\varepsilon}$. Expanding the double
+integral in full,
+\begin{equation}
+\begin{aligned}
+\Eb_{P_0(F_\varepsilon)}[v_\beta]
+&= \iint v_\beta(t,x,y')\dd F_{TX,\varepsilon}(t,x)\dd F_{Y,\varepsilon}(y')\\[2pt]
+&= (1-\varepsilon)^2\,\Eb_{P_0}[v_\beta]
+\;+\;(1-\varepsilon)\varepsilon\,\Eb_{F_{TX}}\big[v_\beta(T,X,y_o)\big]\\
+&\qquad+\;\varepsilon(1-\varepsilon)\,\Eb_{F_{Y}}\big[v_\beta(t_o,x_o,Y')\big]
+\;+\;\varepsilon^2\,v_\beta(t_o,x_o,y_o),
+\end{aligned}
+\label{eq:p0-expanded}
+\end{equation}
+the four terms corresponding to neither, one, the other, or both factors being
+contaminated. Differentiating at $\varepsilon=0$, the quadratic term vanishes, the
+$(1-\varepsilon)^2$ term contributes $-2$, and each cross term contributes $+1$:
+\begin{equation}
+\frac{\partial}{\partial\varepsilon}\Eb_{P_0(F_\varepsilon)}[v_\beta]\Big|_{0}
+= \Eb_{F_Y}\big[v_\beta(t_o,x_o,Y')\big]
++ \Eb_{F_{TX}}\big[v_\beta(T,X,y_o)\big]
+- 2\,\Eb_{P_0}[v_\beta].
+\label{eq:channel0}
+\end{equation}
+The factor $-2$ is what splits the contrastive derivative into two channels, one per
+factor of the product measure. Writing them separately,
+\begin{equation}
+\begin{aligned}
+D_1 &:= r\Big(u_\beta(t_o,x_o,y_o)-\Eb_{P_1}[u_\beta]\Big),\\
+D_0^{TX} &:= (1-r)\Big(\Eb_{F_Y}\big[v_\beta(t_o,x_o,Y')\big]-\Eb_{P_0}[v_\beta]\Big),\\
+D_0^{Y} &:= (1-r)\Big(\Eb_{F_{TX}}\big[v_\beta(T,X,y_o)\big]-\Eb_{P_0}[v_\beta]\Big),
+\end{aligned}
+\label{eq:channels}
+\end{equation}
+so that $D=D_1+D_0^{TX}+D_0^{Y}$; the penalty $2\lambda\beta$ does not depend on $F$
+and contributes nothing, and the mixing weight $r$ is a design constant. The first
+contrastive channel freezes the contaminated pair $(t_o,x_o)$ and averages over
+$Y'\sim f_Y$; the second freezes the contaminated outcome $y_o$ and averages over
+$(T,X)\sim f_{TX}$. These two channels are the price of manufacturing the negative
+class from the data, and they are absent from the textbook sandwich formula, which
+conditions on a fixed training law.
+
+\subsection{The closed form}
+\label{sec:closed-form}
+
+Introduce the three vectors of $\mathbb{R}^k$
+\begin{equation}
+b_{TX}(t_o,x_o) := \Eb_{Y'\sim f_Y}\big[q_\beta\phi\,(t_o,x_o,Y')\big],
+\qquad
+b_{Y}(y_o) := \Eb_{(T,X)\sim f_{TX}}\big[q_\beta\phi\,(T,X,y_o)\big],
+\qquad
+b_0 := \Eb_{P_0}\big[q_\beta\phi\big],
+\label{eq:b-vectors}
+\end{equation}
+so that, by~\eqref{eq:uv}, $\Eb_{F_Y}[v_\beta(t_o,x_o,Y')]=b_{TX}(t_o,x_o)$,
+$\Eb_{F_{TX}}[v_\beta(T,X,y_o)]=b_Y(y_o)$ and $\Eb_{P_0}[v_\beta]=b_0$. Summing the
+three channels of~\eqref{eq:channels},
+\[
+D(o;\beta) = r\,u_\beta(o) + (1-r)\big(b_{TX}(t_o,x_o)+b_Y(y_o)\big)
+- \Big(r\,\Eb_{P_1}[u_\beta] + 2(1-r)\,b_0\Big),
+\]
+the last bracket collecting the three centering terms, one from $D_1$ and two
+identical ones from the contrastive channels. The first-order condition~\eqref{eq:foc}
+gives $r\,\Eb_{P_1}[u_\beta] = -2\lambda\beta_\lambda-(1-r)b_0$, whence
+\[
+-\Big(r\,\Eb_{P_1}[u_\beta]+2(1-r)b_0\Big)
+= 2\lambda\beta_\lambda+(1-r)b_0-2(1-r)b_0
+= 2\lambda\beta_\lambda-(1-r)\,b_0 .
+\]
+Note that a residual $-(1-r)b_0$ survives: the first-order condition removes one of
+the two contrastive centering terms but not both, and dropping it would be an error.
+This gives the result.
+
+\begin{keyresult}
+For ridge-penalized logistic regression with $\lambda\ge0$, at
+$\beta=\beta_\lambda(F)$ and $o=(y_o,t_o,x_o)$,
+\begin{equation}
+\IF\big(o;\beta_\lambda,F\big)
+= -\,\Hb_\lambda^{-1}\,D(o;\beta),
+\qquad
+D(o;\beta) = r\big(q_\beta(o)-1\big)\phi(o)
++ (1-r)\Big(b_{TX}(t_o,x_o)+b_Y(y_o)-b_0\Big)
++ 2\lambda\beta_\lambda,
+\label{eq:if-beta}
+\end{equation}
+with $\Hb_\lambda$ as in~\eqref{eq:hessian} and $b_{TX},b_Y,b_0$ as
+in~\eqref{eq:b-vectors}. By the chain rule and~\eqref{eq:grad-q}, for any fixed
+evaluation point,
+\begin{equation}
+\IF\big(o;q_r(t,x,y),F\big)
+= \nabla_\beta q_\beta(t,x,y)^\top\IF\big(o;\beta_\lambda,F\big)
+= q_\beta(1-q_\beta)\,\phi(t,x,y)^\top\,\IF\big(o;\beta_\lambda,F\big).
+\label{eq:if-qr}
+\end{equation}
+\end{keyresult}
+
+Setting $\lambda=0$ recovers the classical logistic case. Dropping in addition the two
+contrastive channels, which is what fixing the contrast law by design would do as in
+noise-contrastive estimation \citep{gutmann2010nce}, leaves
+$-\Hb_0^{-1}(q_\beta(o)-z_o)\phi(o)$, the textbook sandwich formula.
+
+\subsection{Verification: the zero-mean property}
+\label{sec:check}
+
+Every influence function integrates to zero under the law at which it is taken. This
+is the sharpest available check on~\eqref{eq:if-beta}, and it fails if the residual
+$-b_0$ is omitted.
+
+\begin{lemma}[Zero mean]
+\label{lem:zero-mean}
+$\Eb_{o\sim F}\big[\IF(o;\beta_\lambda,F)\big]=0$, equivalently
+$\Eb_{o\sim F}[D(o;\beta)]=0$.
+\end{lemma}
+
+\begin{proof}
+Take the expectation of $D$ in~\eqref{eq:if-beta} over $o\sim F$, term by term. For the
+real channel, $o$ is distributed as $P_1$, so
+$\Eb_o[r(q_\beta(o)-1)\phi(o)]=r\,\Eb_{P_1}[u_\beta]$. For the first contrastive
+channel, the contaminated pair $(t_o,x_o)$ is distributed as $F_{TX}$, so by Fubini and
+the independence built into $P_0$,
+\[
+\Eb_o\big[b_{TX}(t_o,x_o)\big]
+= \Eb_{(T,X)\sim F_{TX}}\Eb_{Y'\sim F_Y}\big[v_\beta(T,X,Y')\big]
+= \Eb_{P_0}[v_\beta] = b_0,
+\]
+and symmetrically $\Eb_o[b_Y(y_o)]=b_0$, since $y_o$ is distributed as $F_Y$. The
+vectors $b_0$ and $2\lambda\beta_\lambda$ are constants. Summing,
+\[
+\Eb_o[D] = r\,\Eb_{P_1}[u_\beta] + (1-r)\big(b_0+b_0-b_0\big) + 2\lambda\beta_\lambda
+= \underbrace{r\,\Eb_{P_1}[u_\beta]+(1-r)\,\Eb_{P_0}[v_\beta]}_{=-2\lambda\beta_\lambda\ \text{by}~\eqref{eq:foc}}
++\,2\lambda\beta_\lambda = 0. \qedhere
+\]
+\end{proof}
+
+Without the residual $-b_0$ the sum would leave $(1-r)b_0\neq0$, so the term is not
+optional. Lemma~\ref{lem:zero-mean} also yields a free numerical diagnostic: the
+empirical average of $\widehat D(O_i)$ over the evaluation fold must be close to zero,
+and a departure signals an error in $\hat b_0$, in one of the channels, or in the
+empirical first-order condition.
+
+\subsection{Plugging into the interventional density}
+\label{sec:plug}
+
+The MCD-native correction requires the classifier's influence function only through
+\[
+\Eb_X\!\left[\frac{\IF\big(o;q_r(t,X,y),F\big)}{\big(1-q_r(t,X,y)\big)^2}\right].
+\]
+Since $\IF(o;\beta_\lambda,F)$ does not depend on $X$, it factors out of the
+expectation, and by~\eqref{eq:if-qr} together with
+$q(1-q)/(1-q)^2=q/(1-q)=g$,
+\begin{equation}
+\Eb_X\!\left[\frac{\IF\big(o;q_r(t,X,y),F\big)}{\big(1-q_r(t,X,y)\big)^2}\right]
+= a_\lambda(t,y)^\top\,\IF\big(o;\beta_\lambda,F\big),
+\qquad
+a_\lambda(t,y) := \Eb_X\big[g(t,X,y)\,\phi(t,X,y)\big],
+\label{eq:a-lambda}
+\end{equation}
+the odds-weighted average feature vector. Substituting into the MCD-native influence
+function of the target gives the one-step estimator, in which no generalized
+propensity score and no kernel in $T$ appear:
+\begin{equation}
+\hat p_t(y)
+= \frac1n\sum_{i=1}^n\Big\{
+\hat f_Y(y)\,\hat c\Big[\hat g(t,X_i,y)-\bar g(t,y)-\hat\xi(t,y)^\top\widehat D(O_i)\Big]
++ \hat m(t,y)\big(K_{h_Y}(Y_i-y)-\hat f_Y(y)\big)\Big\},
+\label{eq:final-estimator}
+\end{equation}
+with $\bar g(t,y):=\frac1n\sum_j\hat g(t,X_j,y)$, $\hat m(t,y):=\hat c\,\bar g(t,y)$,
+$\hat c=(1-r)/r$, and
+\begin{equation}
+\xi(t,y) := \Hb_\lambda^{-1}a_\lambda(t,y),
+\qquad\text{so that}\qquad
+a_\lambda(t,y)^\top\IF(o;\beta_\lambda,F) = -\,\xi(t,y)^\top D(o;\beta).
+\label{eq:xi}
+\end{equation}
+The reparametrization~\eqref{eq:xi} matters computationally: it moves the linear solve
+from the observations to the evaluation points, of which there are far fewer.
+
+\subsection{Algorithm}
+\label{sec:algo}
+
+\paragraph{Building the augmented sample.}
+For each $i$, keep the real quadruple $(T_i,X_i,Y_i,Z{=}1)$ and create $\kappa$
+contrastive quadruples $(T_i,X_i,Y'_{i\ell},Z{=}0)$ with $Y'_{i\ell}$ drawn uniformly
+from the observed outcomes $\{Y_1,\dots,Y_n\}$, which samples $f_Y$ by permutation.
+Then $r=1/(1+\kappa)$ and $c=(1-r)/r=\kappa$; the choice $\kappa=1$ gives $r=1/2$ and
+$c=1$. Note that $\Dz$ is a sample from $P_r$ and its contrastive half is a sample
+from $P_0$, so both $\Hb_\lambda$ and $b_0$ are ordinary averages over $\Dz$, at cost
+$O(N)$ rather than $O(n^2)$.
+
+\begin{algorithm}[htbp]
+\caption{One-step MCD estimator with a ridge logistic classifier}
+\label{alg:main}
+\begin{algorithmic}[1]
+\State Split the sample into folds $\mathcal{A}$ (fitting) and $\mathcal{B}$ (evaluation); swap and average at the end.
+\State On $\mathcal{A}$: build $\Dz$ as above and fit $\hat\beta_\lambda$ by ridge-penalized cross-entropy.
+\State On $\mathcal{A}$: form $\hat\Hb_\lambda=\frac1N\sum_{w\in\Dz}\hat q(w)(1-\hat q(w))\phi(w)\phi(w)^\top+2\lambda I_k$ and factorize it once by Cholesky. \Comment{$O(Nk^2+k^3)$}
+\State On $\mathcal{A}$: form $\hat b_0=\frac{1}{N_0}\sum_{w\in\text{contrastive half}}\hat q(w)\phi(w)$. \Comment{$O(N_0k)$}
+\For{each evaluation point $(t,y)$}
+  \State $\hat a_\lambda(t,y)\gets\frac1n\sum_j\hat g(t,X_j,y)\phi(t,X_j,y)$ with $\hat g=\hat q/(1-\hat q)$.
+  \State Solve $\hat\xi(t,y)\gets\hat\Hb_\lambda^{-1}\hat a_\lambda(t,y)$ by back-substitution. \Comment{$O(k^2)$}
+\EndFor
+\For{each $O_i$ in $\mathcal{B}$}
+  \State $\hat b_{TX}(T_i,X_i)\gets\frac1S\sum_{j\in\mathcal{S}}\hat q(T_i,X_i,Y_j)\phi(T_i,X_i,Y_j)$.
+  \State $\hat b_{Y}(Y_i)\gets\frac1S\sum_{j\in\mathcal{S}}\hat q(T_j,X_j,Y_i)\phi(T_j,X_j,Y_i)$.
+  \State $\widehat D(O_i)\gets r(\hat q(O_i)-1)\phi(O_i)+(1-r)\big(\hat b_{TX}(T_i,X_i)+\hat b_Y(Y_i)-\hat b_0\big)+2\lambda\hat\beta_\lambda$.
+\EndFor
+\State Check $\big\|\frac1n\sum_i\widehat D(O_i)\big\|\approx0$ (Lemma~\ref{lem:zero-mean}).
+\State Return $\hat p_t(y)$ from~\eqref{eq:final-estimator}, each $i$ costing one inner product $\hat\xi(t,y)^\top\widehat D(O_i)$.
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Cost.}
+The two contrastive channels are the only quadratic step in principle, since each
+requires an average over the marginals for every $o$. Subsampling the inner average
+over $S$ draws, with $S$ of the order of a few hundred, reduces this to $O(nSk)$; the
+resulting Monte Carlo error is $O(S^{-1/2})$ and is absorbed, since these vectors enter
+a correction that is itself averaged over $i$. Everything else is linear in $n$ apart
+from the single Cholesky factorization, $O(k^3)$, and one back-substitution per
+evaluation point, $O(k^2)$.
+
+\paragraph{On the choice of $\lambda$.}
+At fixed $\lambda>0$ the estimand is the ridge population minimizer $\beta_\lambda(F)$
+and~\eqref{eq:if-beta} is exact for it; the term $2\lambda I_k$ inside $\Hb_\lambda$
+bounds the influence, the local robustness of penalized M-estimators
+\citep{avella2017}. At $\lambda_n=o(n^{-1/2})$ the penalty is first-order negligible
+and~\eqref{eq:if-beta} reduces to the classical influence function. In both regimes the
+closed form is used as written, and the only bandwidth in the whole procedure is $h_Y$,
+carried by the marginal correction in~\eqref{eq:final-estimator}.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

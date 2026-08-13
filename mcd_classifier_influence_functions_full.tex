@@ -1,0 +1,517 @@
+% =====================================================================
+% Section: the influence function of the MCD classifier nuisance IF(q_r)
+% for logistic regression (classical and ridge), the MLP, and CatBoost.
+%
+% Organizing principle: a single closed form covers all three, because
+% the MLP and CatBoost are handled through a frozen representation and a
+% penalized logistic head. The generalized propensity score never
+% appears. The Riesz route is kept only as a fallback remark.
+%
+% Self-contained preamble so it compiles alone; drop-in compatible with
+% the companion paper (same notation and equation names).
+% =====================================================================
+
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{bm}
+\usepackage{mathtools}
+\usepackage{hyperref}
+\usepackage[round]{natbib}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{booktabs}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem*{remark}{Remark}
+\newtheorem*{assumption}{Assumption}
+
+\newcommand{\Eb}{\mathbb{E}}
+\newcommand{\Tset}{\mathcal{T}}
+\newcommand{\Xset}{\mathcal{X}}
+\newcommand{\IF}{\mathrm{IF}}
+\newcommand{\Hb}{\mathcal{H}}
+
+\newtcolorbox{keyresult}[1][]{
+  colback=blue!4, colframe=blue!45!black, boxrule=0.4pt,
+  arc=1mm, left=6pt, right=6pt, top=4pt, bottom=4pt, #1
+}
+
+\begin{document}
+
+\section{The influence function of the classifier nuisance}
+\label{sec:if-qr}
+
+The MCD-native correction of the interventional density is
+\begin{equation}
+\begin{aligned}
+\IF\big(o;p_t(y),F\big)
+&= f_Y(y)\,c\left\{ g(t,X_o,y) - \Eb_X[g(t,X,y)]
++ \Eb_X\!\left[\frac{\IF\big(o;q_r(t,X,y),F\big)}{\big(1-q_r(t,X,y)\big)^2}\right] \right\} \\
+&\quad + m(t,y)\big(K_{h_Y}(Y_o-y)-f_Y(y)\big),
+\end{aligned}
+\label{eq:if-mcd-native}
+\end{equation}
+with $g=q_r/(1-q_r)$, $c=(1-r)/r$ and $m(t,y)=c\,\Eb_X[g(t,X,y)]$. Every term is
+elementary except one: the influence function of the classifier itself,
+$\IF(o;q_r(t,x,y),F)$. This section computes it for the three binary classifiers we
+use, and the outcome is a single closed form covering all three.
+
+The point of the whole construction is to avoid the generalized propensity score
+$\pi(t\mid x)$, a conditional density in the multidimensional treatment coordinate,
+which the classical correction requires and which is precisely what MCD was designed
+to eliminate. Nothing below reintroduces it: the correction is expressed through the
+classifier's own parameters, and the only expectations to be estimated are ordinary
+sample averages over the augmented data.
+
+We work with the augmented sample $W=(T,X,Y,Z)$ of the MCD construction: with
+probability $r$ the triple $(T,X,Y)$ is real and labeled $Z=1$; with probability
+$1-r$ it is contrastive, $(T,X,Y')$ with $Y'\sim f_Y$ drawn independently of
+$(T,X)$, labeled $Z=0$. Write $P_1(F)=F_{TXY}$ for the real law, $P_0(F)=F_{TX}\otimes
+F_Y$ for the contrastive law, and $\Eb_{P_r}=r\,\Eb_{P_1}+(1-r)\,\Eb_{P_0}$ for
+expectation under the augmented mixture. The single structural fact driving
+everything below is that $P_0(F)$ is itself a functional of $F$, being built from the
+marginals of $F$: perturbing $F$ moves the contrastive class as well as the real one.
+
+\subsection{What the classifier must satisfy}
+\label{sec:if-qr-regularity}
+
+The object we need, $\IF(o;q_r,F)$, is a derivative: it measures how far the fitted
+function $q_r$ moves when the data-generating law $F$ is perturbed infinitesimally
+toward a point mass at $o$, along the path $F_\varepsilon=(1-\varepsilon)F+\varepsilon\delta_o$.
+For this derivative to exist, the training map $F\mapsto q_r(\cdot;F)$ must be smooth:
+a small perturbation of $F$ must displace $q_r$ by a small amount, not make it jump.
+
+A classifier defined as the minimizer of a smooth penalized criterion has this
+property, and for a concrete reason. Its parameter $\beta$ is characterized by an
+equation, the first-order condition of the criterion. Perturbing $F$ displaces that
+equation slightly, hence displaces its solution slightly, and the implicit function
+theorem converts the displacement of the equation into the displacement of the
+solution. This is the entire mechanism behind every sandwich formula, and it is the
+mechanism we use.
+
+A classifier that is not defined this way does not qualify, and two of our three
+families do not. A tree selects split thresholds; under a perturbation of $F$ a
+threshold eventually flips from one value to another and the fitted function jumps,
+so no derivative exists. Boosting compounds the problem: the ensemble is built
+greedily, one tree at a time, each correcting the residual of the previous ones, so
+there is no single criterion to differentiate at all, only a sequential recipe. A
+multilayer perceptron fails for different reasons: its training criterion is
+nonconvex, so the minimizer is not a single-valued function of $F$; its Hessian at a
+trained network is typically singular; and training is stopped early rather than run
+to a stationary point, so the first-order condition does not hold exactly.
+\citet{basu2021} document that influence estimates computed as if these conditions
+held degrade sharply with depth, width and scale, and \citet{bae2022} show that what
+the damped implementation actually approximates is a proximal response around the
+trained weights, not the Gateaux derivative of a statistical functional. Since the
+bias cancellation in~\eqref{eq:if-mcd-native} is an identity about the true
+derivative, an object that only loosely tracks it delivers none of the cancellation.
+
+Section~\ref{sec:if-qr-frozen} resolves this by construction rather than by
+approximation: the MLP and CatBoost are split into a representation, which is frozen,
+and a logistic head, which is refitted and is a smooth penalized M-estimator by
+design. The master formula of Section~\ref{sec:if-qr-master} then applies to all three
+classifiers without modification.
+
+\subsection{The master formula}
+\label{sec:if-qr-master}
+
+Let the classifier be a penalized empirical risk minimizer over a model
+$\{q_{r,\beta}:\beta\in\mathbb{R}^k\}$, with loss $\ell(z,q)$ smooth in $q$ and
+penalty $\lambda\mathcal{J}(\beta)$. The population criterion and its minimizer are
+\begin{equation}
+M_\lambda(\beta;F)
+= r\,\Eb_{P_1}\big[\ell(1,q_{r,\beta})\big]
++ (1-r)\,\Eb_{P_0}\big[\ell(0,q_{r,\beta})\big]
++ \lambda\,\mathcal{J}(\beta),
+\qquad
+\beta_\lambda(F)=\arg\min_\beta M_\lambda(\beta;F).
+\label{eq:pop-criterion}
+\end{equation}
+Write the per-label gradients and the penalized population Hessian
+\[
+u_\beta=\nabla_\beta\ell(1,q_{r,\beta}),\qquad
+v_\beta=\nabla_\beta\ell(0,q_{r,\beta}),\qquad
+\Hb_\lambda= r\,\Eb_{P_1}[\nabla_\beta u_\beta]+(1-r)\,\Eb_{P_0}[\nabla_\beta v_\beta]+\lambda\nabla^2\mathcal{J}(\beta).
+\]
+
+\begin{assumption}[Smooth penalized classifier]
+\label{as:smooth}
+$\beta_\lambda(F)$ exists, is unique and lies in the interior of the parameter set;
+$\ell(z,\cdot)$ and $\mathcal{J}$ are twice differentiable; $\Hb_\lambda$ is
+nonsingular at $\beta_\lambda(F)$; and $q_{r,\beta}$ is bounded away from $0$ and $1$
+on the support of interest, so that $g$ and $1/(1-q_r)$ are finite.
+\end{assumption}
+
+\begin{proposition}[Three-channel influence function]
+\label{prop:master}
+Under Assumption~\ref{as:smooth}, with all functions evaluated at
+$\beta=\beta_\lambda(F)$ and $o=(y_o,t_o,x_o)$,
+\begin{equation}
+\IF\big(o;\beta_\lambda,F\big) = -\,\Hb_\lambda^{-1}\big(D_1+D_0^{TX}+D_0^{Y}\big),
+\label{eq:master}
+\end{equation}
+\begin{equation}
+\begin{aligned}
+D_1 &= r\big( u_\beta(t_o,x_o,y_o) - \Eb_{P_1}[u_\beta] \big),\\
+D_0^{TX} &= (1-r)\big( \Eb_{F_Y}[v_\beta(t_o,x_o,Y')] - \Eb_{P_0}[v_\beta] \big),\\
+D_0^{Y} &= (1-r)\big( \Eb_{F_{TX}}[v_\beta(T,X,y_o)] - \Eb_{P_0}[v_\beta] \big),
+\end{aligned}
+\label{eq:channels}
+\end{equation}
+and, for any fixed evaluation point $(t,x,y)$,
+\begin{equation}
+\IF\big(o;q_r(t,x,y),F\big) = \nabla_\beta q_{r,\beta}(t,x,y)^\top\,\IF\big(o;\beta_\lambda,F\big).
+\label{eq:if-qr-chain}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Perturb $F_\varepsilon=(1-\varepsilon)F+\varepsilon\delta_o$. The real law is
+$P_1(F_\varepsilon)=F_\varepsilon$ itself, so for a fixed integrand $u$,
+\begin{equation}
+\frac{\partial}{\partial\varepsilon}\Eb_{P_1(F_\varepsilon)}[u]\Big|_{0}
+= u(t_o,x_o,y_o)-\Eb_{P_1}[u].
+\label{eq:proof-channel1}
+\end{equation}
+The contrastive law factorizes, $P_0(F_\varepsilon)=F_{TX,\varepsilon}\otimes
+F_{Y,\varepsilon}$, with marginals
+$F_{TX,\varepsilon}=(1-\varepsilon)F_{TX}+\varepsilon\delta_{(t_o,x_o)}$ and
+$F_{Y,\varepsilon}=(1-\varepsilon)F_Y+\varepsilon\delta_{y_o}$. Since
+\[
+\Eb_{P_0(F_\varepsilon)}[v]=\iint v(t,x,y')\,\mathrm dF_{TX,\varepsilon}(t,x)\,\mathrm dF_{Y,\varepsilon}(y')
+\]
+is a product of two affine functions of $\varepsilon$ paired through the double
+integral, the product rule gives one term per factor,
+\begin{equation}
+\frac{\partial}{\partial\varepsilon}\Eb_{P_0(F_\varepsilon)}[v]\Big|_{0}
+= \big(\Eb_{F_Y}[v(t_o,x_o,Y')]-\Eb_{P_0}[v]\big)
++ \big(\Eb_{F_{TX}}[v(T,X,y_o)]-\Eb_{P_0}[v]\big),
+\label{eq:proof-channel0}
+\end{equation}
+the first bracket from differentiating $F_{TX,\varepsilon}$ at fixed $F_Y$, the
+second from differentiating $F_{Y,\varepsilon}$ at fixed $F_{TX}$. The mixing weight
+$r$ is a design constant and contributes no derivative.
+
+The estimand solves $G_\lambda(\beta_\lambda(F_\varepsilon);F_\varepsilon)=0$ with
+$G_\lambda=\nabla_\beta M_\lambda$. Differentiating this identity in $\varepsilon$ at
+$0$, and using $\Hb_\lambda=\nabla_\beta G_\lambda$ nonsingular,
+\[
+\Hb_\lambda\,\frac{\partial}{\partial\varepsilon}\beta_\lambda(F_\varepsilon)\Big|_0
++ \frac{\partial}{\partial\varepsilon}G_\lambda(\beta;F_\varepsilon)\Big|_0 = 0
+\quad\Longrightarrow\quad
+\IF(o;\beta_\lambda,F) = -\Hb_\lambda^{-1}\,\frac{\partial}{\partial\varepsilon}G_\lambda(\beta;F_\varepsilon)\Big|_0.
+\]
+Since $G_\lambda(\beta;F_\varepsilon)=r\Eb_{P_1(F_\varepsilon)}[u_\beta]+(1-r)\Eb_{P_0(F_\varepsilon)}[v_\beta]+\lambda\nabla\mathcal{J}(\beta)$
+and the penalty does not depend on $F$, applying~\eqref{eq:proof-channel1} to the
+$P_1$ term with $u=u_\beta$ and~\eqref{eq:proof-channel0} to the $P_0$ term with
+$v=v_\beta$ yields exactly $D_1+D_0^{TX}+D_0^{Y}$, hence~\eqref{eq:master}. Finally
+\eqref{eq:if-qr-chain} is the chain rule applied to $\beta\mapsto q_{r,\beta}(t,x,y)$
+at fixed $(t,x,y)$.
+\end{proof}
+
+Two features of~\eqref{eq:master} matter downstream. The channels $D_0^{TX}$ and
+$D_0^{Y}$ are the price of manufacturing the contrastive class from the data: they
+are absent from every textbook sandwich formula, which conditions on a fixed training
+law, and they vanish only if the contrast distribution is fixed by design, as in
+noise-contrastive estimation \citep{gutmann2010nce}, in which case~\eqref{eq:master}
+reduces to the textbook formula. Second, no kernel and no bandwidth appear: $q_r$ is
+evaluated at a fixed point through the smooth model $q_{r,\beta}$, not through a data
+point mass, so the correction term needs no kernel in $T$.
+
+Substituting~\eqref{eq:if-qr-chain} into the correction term
+of~\eqref{eq:if-mcd-native} collapses the $X$-expectation into a fixed $k$-vector.
+
+\begin{corollary}[Representer collapse]
+\label{cor:collapse}
+With
+$a_\lambda(t,y):=\Eb_X\!\big[\nabla_\beta q_{r,\beta}(t,X,y)/(1-q_{r,\beta}(t,X,y))^2\big]$,
+\begin{equation}
+\Eb_X\!\left[\frac{\IF\big(o;q_r(t,X,y),F\big)}{\big(1-q_r(t,X,y)\big)^2}\right]
+= a_\lambda(t,y)^\top\,\IF\big(o;\beta_\lambda,F\big),
+\label{eq:collapse}
+\end{equation}
+so the correction term of~\eqref{eq:if-mcd-native} is the scalar
+$f_Y(y)\,c\,a_\lambda(t,y)^\top\IF(o;\beta_\lambda,F)$: one linear solve against
+$\Hb_\lambda$ and one inner product per evaluation point $(t,y)$.
+\end{corollary}
+
+It remains to make $\Hb_\lambda$, the three channels and $a_\lambda$ explicit. We do
+this once, for the logistic model, and then show that the MLP and CatBoost reduce to
+it.
+
+\subsection{Logistic regression: classical and ridge}
+\label{sec:if-qr-logistic}
+
+Let $q_{r,\beta}(t,x,y)=\sigma(\beta^\top\phi(t,x,y))$ with $\sigma(u)=1/(1+e^{-u})$
+and a fixed feature map $\phi:\Tset\times\Xset\times\mathbb{R}\to\mathbb{R}^k$, fit by
+cross-entropy $\ell(z,q)=-z\log q-(1-z)\log(1-q)$, with penalty
+$\mathcal{J}(\beta)=\|\beta\|_2^2$ for ridge and $\lambda=0$ for the classical
+unpenalized fit. Abbreviate $q:=q_{r,\beta}$ and $\phi:=\phi(t,x,y)$.
+
+\paragraph{Gradients and Hessian.}
+With $s:=\beta^\top\phi$ and $q=\sigma(s)$, using $\sigma'=\sigma(1-\sigma)$,
+\[
+\nabla_\beta\ell(z,q)
+= \frac{\partial\ell}{\partial q}\cdot\frac{\partial q}{\partial s}\cdot\nabla_\beta s
+= \Big(-\frac{z}{q}+\frac{1-z}{1-q}\Big)\cdot q(1-q)\cdot\phi
+= \big(q-z\big)\,\phi,
+\]
+the classical cancellation of the sigmoid against the cross-entropy. Hence
+\begin{equation}
+u_\beta=(q-1)\phi,\qquad v_\beta=q\,\phi,
+\qquad
+\nabla_\beta u_\beta=\nabla_\beta v_\beta = q(1-q)\,\phi\phi^\top,
+\label{eq:logistic-grads}
+\end{equation}
+the last equality from $\nabla_\beta q=q(1-q)\phi$. Both labels contribute the same
+second derivative, so the two expectations in $\Hb_\lambda$ merge into a single one
+under the augmented mixture,
+\begin{equation}
+\Hb_\lambda = \Eb_{P_r}\big[q(1-q)\,\phi\phi^\top\big] + 2\lambda I_k,
+\label{eq:logistic-hessian}
+\end{equation}
+positive definite for $\lambda>0$, and positive definite for $\lambda=0$ as soon as
+$\phi$ exhibits no perfect collinearity on the support. In particular $\Hb_\lambda$ is
+estimated by one average over the augmented sample $\mathcal{D}_Z$.
+
+\paragraph{Resolving the centering terms.}
+The population first-order condition of~\eqref{eq:pop-criterion} reads
+\begin{equation}
+r\,\Eb_{P_1}[u_\beta]+(1-r)\,\Eb_{P_0}[v_\beta] = -2\lambda\beta_\lambda,
+\label{eq:logistic-foc}
+\end{equation}
+which eliminates the centering terms appearing in~\eqref{eq:channels}. Summing the
+three channels,
+\[
+D_1+D_0^{TX}+D_0^{Y}
+= r\,u_\beta(o) + (1-r)\Eb_{F_Y}[v_\beta(t_o,x_o,Y')] + (1-r)\Eb_{F_{TX}}[v_\beta(T,X,y_o)]
+- \Big(r\Eb_{P_1}[u_\beta]+2(1-r)\Eb_{P_0}[v_\beta]\Big),
+\]
+the last bracket collecting one centering term from $D_1$ and two identical ones from
+$D_0^{TX}$ and $D_0^{Y}$. Using~\eqref{eq:logistic-foc},
+\[
+-\Big(r\Eb_{P_1}[u_\beta]+2(1-r)\Eb_{P_0}[v_\beta]\Big)
+= 2\lambda\beta_\lambda-(1-r)\Eb_{P_0}[v_\beta],
+\]
+and absorbing the leftover $-(1-r)\Eb_{P_0}[v_\beta]$ back into either contrastive
+channel's centering (they are identical) leaves the compact form below.
+
+\begin{keyresult}
+For logistic regression with ridge penalty $\lambda\ge0$, where $\lambda=0$ is the
+classical fit,
+\begin{equation}
+\IF\big(o;\beta_\lambda,F\big)
+= -\,\Hb_\lambda^{-1}\Big\{
+\underbrace{r\big(q(o)-1\big)\phi(o)}_{\text{real channel}}
++\underbrace{(1-r)\,\Eb_{F_Y}\!\big[q\phi\big](t_o,x_o,\cdot)}_{\text{contrastive }(t,x)\text{-channel}}
++\underbrace{(1-r)\,\Eb_{F_{TX}}\!\big[q\phi\big](\cdot,\cdot,y_o)}_{\text{contrastive }y\text{-channel}}
++2\lambda\beta_\lambda\Big\},
+\label{eq:if-beta-logistic}
+\end{equation}
+with
+$\Eb_{F_Y}[q\phi](t_o,x_o,\cdot)=\Eb_{Y'\sim f_Y}\big[q_{r,\beta}(t_o,x_o,Y')\,\phi(t_o,x_o,Y')\big]$
+and
+$\Eb_{F_{TX}}[q\phi](\cdot,\cdot,y_o)=\Eb_{(T,X)\sim f_{TX}}\big[q_{r,\beta}(T,X,y_o)\,\phi(T,X,y_o)\big]$.
+The representer of Corollary~\ref{cor:collapse} collapses to the odds-weighted feature
+average
+\begin{equation}
+a_\lambda(t,y)
+= \Eb_X\!\left[\frac{\nabla_\beta q_{r,\beta}(t,X,y)}{(1-q_{r,\beta}(t,X,y))^2}\right]
+= \Eb_X\!\left[\frac{q(1-q)}{(1-q)^2}\,\phi\right]
+= \Eb_X\big[g(t,X,y)\,\phi(t,X,y)\big],
+\label{eq:a-logistic}
+\end{equation}
+using $q(1-q)/(1-q)^2=q/(1-q)=g$. The correction term of~\eqref{eq:if-mcd-native} is
+then $f_Y(y)\,c\,a_\lambda(t,y)^\top\IF(o;\beta_\lambda,F)$.
+\end{keyresult}
+
+Setting $\lambda=0$ recovers the classical logistic case: the $2\lambda\beta_\lambda$
+term drops and $\Hb_0=\Eb_{P_r}[q(1-q)\phi\phi^\top]$. Dropping in addition the two
+contrastive channels, which is what fixing the contrast law by design would do,
+leaves $-\Hb_0^{-1}(q(o)-z_o)\phi(o)$, the textbook logistic influence function: a
+useful check on~\eqref{eq:if-beta-logistic}.
+
+\paragraph{Estimator.}
+Split the augmented sample into an estimation fold and an evaluation fold. On the
+estimation fold, fit $\hat\beta_\lambda$ by penalized cross-entropy and form
+\[
+\hat\Hb_\lambda = \frac1N\sum_{w\in\mathcal{D}_Z} \hat q(w)\big(1-\hat q(w)\big)\phi(w)\phi(w)^\top + 2\lambda I_k,
+\qquad \hat q(w)=\sigma\big(\hat\beta_\lambda^\top\phi(w)\big).
+\]
+Estimate the two contrastive-channel expectations by empirical marginal averages,
+using the observed $Y_j$ for the $f_Y$-average and the observed pairs $(T_j,X_j)$ for
+the $f_{TX}$-average,
+\[
+\widehat{\Eb_{F_Y}[q\phi]}(t_o,x_o,\cdot)=\frac1n\sum_j \hat q(t_o,x_o,Y_j)\,\phi(t_o,x_o,Y_j),
+\qquad
+\widehat{\Eb_{F_{TX}}[q\phi]}(\cdot,\cdot,y_o)=\frac1n\sum_j \hat q(T_j,X_j,y_o)\,\phi(T_j,X_j,y_o),
+\]
+and set $\hat a_\lambda(t,y)=\frac1n\sum_j \hat g(t,X_j,y)\,\phi(t,X_j,y)$ with
+$\hat g=\hat q/(1-\hat q)$. On the evaluation fold, assemble
+$\widehat\IF(O_i;\beta_\lambda,\hat F)$ from~\eqref{eq:if-beta-logistic} for each $i$
+and plug into the empirical version of~\eqref{eq:if-mcd-native},
+\begin{equation}
+\hat p_t^{\,\mathrm{MCD}}(y)
+= \frac1n\sum_{i} \Big\{
+\hat f_Y(y)\,\hat c\Big[\hat g(t,X_i,y) - \tfrac1n\textstyle\sum_j \hat g(t,X_j,y)
++ \hat a_\lambda(t,y)^\top\widehat\IF(O_i;\beta_\lambda,\hat F)\Big]
++ \hat m(t,y)\big(K_{h_Y}(Y_i-y)-\hat f_Y(y)\big)\Big\},
+\label{eq:mcd-estimator}
+\end{equation}
+with $\hat m(t,y)=\hat c\,\frac1n\sum_j\hat g(t,X_j,y)$. The only bandwidth in the
+whole estimator is $h_Y$, carried by the marginal correction; there is no kernel in
+$T$ and no propensity score anywhere.
+
+\paragraph{The role of $\lambda$.}
+At fixed $\lambda>0$ the estimand is the ridge population minimizer $\beta_\lambda(F)$
+and~\eqref{eq:if-beta-logistic} is exact for it; the $2\lambda I_k$ term inside
+$\Hb_\lambda$ keeps the influence bounded, the local robustness of penalized
+M-estimators \citep{avella2017}, and the regularization bias of order $\lambda$ enters
+$p_t(y)$ only through the doubly robust remainder, multiplied by the error in the
+other nuisance. At $\lambda_n=o(n^{-1/2})$ the penalty is first-order negligible and
+\eqref{eq:if-beta-logistic} reduces to the classical influence function. Both regimes
+leave the closed form usable as written.
+
+\subsection{Multilayer perceptron and CatBoost through a frozen representation}
+\label{sec:if-qr-frozen}
+
+Neither the MLP nor CatBoost satisfies Assumption~\ref{as:smooth}, for the reasons
+given in Section~\ref{sec:if-qr-regularity}. Rather than approximate a derivative that
+does not exist, we make the estimand smooth by construction, exploiting the fact that
+both classifiers already end in a logistic layer.
+
+\paragraph{The two-stage construction.}
+Both models factor as a representation followed by a linear-logistic head. For a
+network $q=\sigma(l_\theta)$ with $L$ layers, let $\phi(t,x,y)\in\mathbb{R}^k$ denote
+the penultimate-layer activation, so that the logit is $l_\theta=\beta^\top\phi$ with
+$\beta$ the final-layer weights. For a gradient-boosted ensemble with $M$ trees, let
+$\phi(t,x,y)\in\{0,1\}^k$ be the concatenated one-hot leaf-indicator vector,
+$k=\sum_{m=1}^M L_m$ with $L_m$ the number of leaves of tree $m$: the entry for leaf
+$\ell$ of tree $m$ equals one if $(t,x,y)$ falls into that leaf, zero otherwise. Since
+each tree returns the value of the leaf reached and the ensemble sums these values, the
+boosted score is exactly linear in $\phi$,
+\[
+F_M(t,x,y) = \sum_{m=1}^M \nu\,h_m(t,x,y) = \beta^\top\phi(t,x,y),
+\]
+with $\beta$ collecting the shrunken leaf values. Both classifiers are therefore
+already of the form $q_{r,\beta}=\sigma(\beta^\top\phi)$ of
+Section~\ref{sec:if-qr-logistic}; what disqualifies them is that $\phi$ is itself
+learned from $F$, and learned nonsmoothly.
+
+The construction removes that dependence by cross-fitting. Partition the augmented
+sample into folds. On fold $\mathcal{A}$, train the MLP or CatBoost without
+restriction and extract the representation $\hat\phi$, that is, the penultimate layer
+or the leaf-indicator map. Freeze it: $\hat\phi$ is now a fixed, known function, no
+longer an estimated object. On fold $\mathcal{B}$, discard the head learned on
+$\mathcal{A}$ and refit a ridge-penalized logistic head
+\[
+\hat\beta_\lambda = \arg\min_\beta\; \frac{1}{|\mathcal{B}|}\sum_{w\in\mathcal{B}} \ell\big(z_w,\sigma(\beta^\top\hat\phi(w))\big) + \lambda\|\beta\|_2^2 ,
+\]
+and use $\hat q_r=\sigma(\hat\beta_\lambda^\top\hat\phi)$ as the MCD nuisance. Swap the
+folds and average, as usual.
+
+\begin{proposition}[Closed-form influence function under a frozen representation]
+\label{prop:frozen}
+Conditionally on $\hat\phi$, the head $q_{r,\beta}=\sigma(\beta^\top\hat\phi)$ is a
+ridge-penalized logistic model with a fixed feature map, and it satisfies
+Assumption~\ref{as:smooth} whenever $\lambda>0$. Consequently
+Proposition~\ref{prop:master}, the closed form~\eqref{eq:if-beta-logistic}, the
+Hessian~\eqref{eq:logistic-hessian}, the representer~\eqref{eq:a-logistic} and the
+estimator~\eqref{eq:mcd-estimator} apply verbatim with
+$\phi\rightsquigarrow\hat\phi$, for the MLP and for CatBoost alike.
+\end{proposition}
+
+\begin{proof}
+Conditionally on $\hat\phi$, the criterion on fold $\mathcal{B}$ is the population
+criterion~\eqref{eq:pop-criterion} with loss $\ell$ the cross-entropy, model
+$\sigma(\beta^\top\hat\phi)$ and penalty $\lambda\|\beta\|_2^2$. It is strictly convex
+in $\beta$ for $\lambda>0$, so its minimizer exists, is unique and interior; the loss
+and penalty are twice differentiable; and by~\eqref{eq:logistic-hessian} the Hessian
+$\Eb_{P_r}[q(1-q)\hat\phi\hat\phi^\top]+2\lambda I_k$ is positive definite, hence
+nonsingular. The remaining condition, $q_{r,\beta}$ bounded away from $0$ and $1$,
+holds on any bounded parameter region with $\hat\phi$ bounded, which is automatic for
+leaf indicators and holds for bounded activations. Assumption~\ref{as:smooth} is
+therefore satisfied, and Proposition~\ref{prop:master} applies with feature map
+$\hat\phi$.
+\end{proof}
+
+Cross-fitting is what licenses treating $\hat\phi$ as fixed while differentiating on
+$\mathcal{B}$: the representation is a function of $\mathcal{A}$ only, independent of
+$\mathcal{B}$, so the perturbation of $F$ along $\mathcal{B}$ does not move it. This
+is the same device that removes empirical-process conditions from every doubly robust
+one-step estimator \citep{chernozhukov2018,kennedy2022review}, used here for an
+additional purpose: to restore differentiability of the nuisance itself.
+
+\paragraph{What is gained and what is paid.}
+What is gained is that all three classifiers share one closed form. The flexibility of
+the network or of the boosted ensemble is preserved, in $\hat\phi$: the representation
+still learns the interactions, nonlinearities and categorical structure that made those
+models attractive in the first place. What is paid is a projection. Differentiating
+the head gives the influence function of the model $\sigma(\beta^\top\hat\phi)$, not of
+the true $q_r$; equivalently, the correction acts along the tangent space spanned by
+$\hat\phi$, the set of directions in which the frozen model can move, and any component
+of the true perturbation orthogonal to that span is not corrected. The resulting bias
+is second order, a product of the head's misspecification error with the error in the
+other nuisance, and is absorbed by the doubly robust remainder of the estimator: the
+same regime in which the whole MCD construction already operates. The practical
+implication is that $\hat\phi$ should be rich, since the width of the penultimate layer
+or the total number of leaves controls the span, and that $k$ is the dimension of the
+one linear solve in~\eqref{eq:if-beta-logistic}, which bounds how rich it can be in
+practice.
+
+Two implementation points are worth recording. For CatBoost the leaf-indicator map is
+sparse, exactly $M$ nonzero entries out of $k$, so $\hat\Hb_\lambda$ is cheap to
+accumulate and $\hat a_\lambda$ cheap to evaluate; oblivious trees make the leaf index
+a fixed-depth binary code, so $\hat\phi$ is read off directly. For the MLP the ridge
+penalty on the head is essential rather than cosmetic, since it is what guarantees the
+nonsingularity used in Proposition~\ref{prop:frozen}, and it plays the role that
+damping plays in \citet{kohliang2017}, but here as part of the estimand rather than as
+a numerical fix. In both cases the probability output should be a consistent estimator
+of $q_r$, which cross-entropy training delivers, being a proper composite loss; boosted
+probabilities are known to be distorted toward a sigmoidal shape in finite samples
+\citep{niculescu2005predicting}, and the refitted logistic head performs exactly the
+recalibration that would otherwise be added post hoc.
+
+\begin{remark}[Fallback: the representer route]
+If one refuses to freeze the representation and insists on debiasing the full,
+end-to-end trained classifier, the nuisance-level influence function must be abandoned
+and the correction reorganized. The correction term of~\eqref{eq:if-mcd-native} is the
+continuous linear functional
+$\dot q\mapsto f_Y(y)\,c\,\Eb_X[\dot q(t,X,y)/(1-q_r(t,X,y))^2]$ evaluated at
+$\dot q=\IF(o;q_r,F)$, and by Riesz representation this evaluation equals
+$\Eb[\alpha(O)\,s(O;o)]$ for a representer $\alpha$, which the equivalence between the
+MCD-native and classical corrections identifies as the localized inverse generalized
+propensity score $\alpha(t;O)=K_{h_T}(T-t)/\pi(t\mid X)$. Automatic debiased machine
+learning estimates $\alpha$ by minimizing a Riesz loss over a flexible class
+\citep{chernozhukov2022autodml,chernozhukov2022riesznet,kato2026riesz}, with the
+kernel-localized continuous-treatment version of \citet{colangelo2020}. We do not take
+this route. Although it estimates $\alpha$ by regression rather than by conditional
+density estimation, it reintroduces the propensity score as the object being learned
+and, since $\alpha$ is of order $h_T^{-1}$, it reintroduces the treatment dimension
+through the variance of a localized regression, which is precisely what MCD was
+designed to avoid. The frozen-representation route above keeps the correction inside
+the classifier and pays instead a second-order projection bias.
+\end{remark}
+
+\paragraph{Summary.}
+For all three classifiers the influence function of the nuisance is the closed
+form~\eqref{eq:if-beta-logistic}, with representer~\eqref{eq:a-logistic}, plugged into
+the estimator~\eqref{eq:mcd-estimator}. Classical and ridge logistic regression satisfy
+the required regularity directly. The MLP and CatBoost satisfy it after the
+representation is frozen on an independent fold and the logistic head refitted, which
+costs a second-order projection bias absorbed by the doubly robust remainder and buys a
+correction expressed entirely through the classifier's own parameters, with no
+generalized propensity score and no kernel in the treatment coordinate.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+% New BibTeX keys to add to references.bib (the rest already exist in the paper):
+% prokhorenkova2018catboost, friedman2001greedy, niculescu2005predicting.
+
+\end{document}

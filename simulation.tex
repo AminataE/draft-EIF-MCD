@@ -1,0 +1,503 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\geometry{margin=1in}
+
+\title{Explicit Interventional and Conditional Densities for Non-Gaussian Synthetic Causal Models}
+\author{Aminata Ndiaye}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{General causal setup and interventional density}
+
+We consider a standard causal setup with variables
+
+
+\[
+X \in \mathbb{R}^p,\quad T \in \mathbb{R}^d,\quad Y \in \mathbb{R},
+\]
+
+
+where $X$ denotes confounders, $T$ a (possibly multidimensional) treatment, and $Y$ the outcome.
+We assume a causal directed acyclic graph (DAG) in which $X$ affects both $T$ and $Y$, and $T$ affects $Y$.
+Under backdoor admissibility, the effect of an intervention $\mathrm{do}(T = t)$ is identified via the backdoor formula.
+
+\subsection{Backdoor formula}
+
+Let $f_{Y \mid T=t, X=x}(y)$ denote the conditional density of $Y$ given $T=t$ and $X=x$, and let $f_X(x)$ be the marginal density of $X$.
+Under standard causal assumptions (consistency, positivity, and conditional exchangeability given $X$), the interventional density of $Y$ under $\mathrm{do}(T=t)$ is
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \int f_{Y \mid T=t, X=x}(y)\, f_X(x)\, \mathrm{d}x.
+    \label{eq:backdoor}
+\end{equation}
+
+\begin{theorem}[Identification of interventional density under backdoor]
+Assume:
+\begin{itemize}
+    \item[(i)] \textbf{Consistency:} $Y^{t} = Y$ whenever $T=t$.
+    \item[(ii)] \textbf{Conditional exchangeability:} $Y^{t} \perp T \mid X$ for all $t$.
+    \item[(iii)] \textbf{Positivity:} $f_{T \mid X}(t \mid x) > 0$ whenever $f_X(x) > 0$.
+\end{itemize}
+Then the interventional density of $Y$ under $\mathrm{do}(T=t)$ is given by \eqref{eq:backdoor}.
+\end{theorem}
+
+\begin{proof}
+By consistency, $Y^{t} = Y$ when $T=t$, so
+
+
+\[
+f_{Y^{t} \mid X=x}(y) = f_{Y \mid T=t, X=x}(y).
+\]
+
+
+By conditional exchangeability, $Y^{t} \perp T \mid X$, hence
+
+
+\[
+f_{Y^{t} \mid X=x}(y) = f_{Y^{t} \mid T=t, X=x}(y) = f_{Y \mid T=t, X=x}(y).
+\]
+
+
+The interventional density is the marginal density of $Y^{t}$:
+
+
+\[
+f_{Y \mid \mathrm{do}(T=t)}(y)
+= f_{Y^{t}}(y)
+= \int f_{Y^{t} \mid X=x}(y)\, f_X(x)\, \mathrm{d}x
+= \int f_{Y \mid T=t, X=x}(y)\, f_X(x)\, \mathrm{d}x,
+\]
+
+
+which is exactly \eqref{eq:backdoor}.
+\end{proof}
+
+In what follows, we construct explicit parametric models for $(X,T,Y)$ such that both
+\begin{itemize}
+    \item the interventional density $f_{Y \mid \mathrm{do}(T=t)}(y)$, and
+    \item the conditional density $f_{Y \mid T=t, X=x}(y)$
+\end{itemize}
+are available in closed form, while exhibiting skewness, multimodality, or heavy tails.
+
+\section{Model 1: Skew-normal outcome (skewness)}
+
+\subsection{Data-generating mechanism}
+
+Let
+
+
+\[
+X \sim \mathcal{N}(\bm{\mu}_X, \Sigma_X) \in \mathbb{R}^p,
+\]
+
+
+and
+
+
+\[
+T \sim \mathcal{N}(\bm{\mu}_T, \Sigma_T) \in \mathbb{R}^d,
+\]
+
+
+with $(X,T)$ jointly Gaussian and correlated (to encode confounding).
+Define the outcome
+\begin{equation}
+    Y = \bm{\alpha}^\top T + \bm{\beta}^\top X + \varepsilon,
+    \label{eq:model1_Y}
+\end{equation}
+where $\bm{\alpha} \in \mathbb{R}^d$, $\bm{\beta} \in \mathbb{R}^p$, and
+
+
+\[
+\varepsilon \sim \mathrm{SkewNormal}(\xi, \omega, \lambda)
+\]
+
+
+is independent of $(X,T)$.
+Recall that a skew-normal random variable $Z \sim \mathrm{SkewNormal}(\xi, \omega, \lambda)$ has density
+\begin{equation}
+    f_Z(z)
+    = \frac{2}{\omega}\, \phi\!\left(\frac{z-\xi}{\omega}\right)\,
+      \Phi\!\left(\lambda\, \frac{z-\xi}{\omega}\right),
+    \label{eq:skewnormal_density}
+\end{equation}
+where $\phi$ and $\Phi$ are the standard normal density and CDF, respectively.
+
+\subsection{Conditional density $f_{Y \mid T=t, X=x}$}
+
+\begin{theorem}[Conditional density in the skew-normal model]
+Under the model \eqref{eq:model1_Y}, for any $(t,x) \in \mathbb{R}^d \times \mathbb{R}^p$,
+\begin{equation}
+    Y \mid T=t, X=x \sim \mathrm{SkewNormal}\big(\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x,\ \omega,\ \lambda\big),
+    \label{eq:model1_conditional_law}
+\end{equation}
+with density
+\begin{equation}
+    f_{Y \mid T=t, X=x}(y)
+    = \frac{2}{\omega}\,
+      \phi\!\left(\frac{y - (\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x)}{\omega}\right)\,
+      \Phi\!\left(\lambda\, \frac{y - (\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x)}{\omega}\right).
+    \label{eq:model1_conditional_density}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Conditioning on $(T=t,X=x)$, the right-hand side of \eqref{eq:model1_Y} becomes
+
+
+\[
+Y = \bm{\alpha}^\top t + \bm{\beta}^\top x + \varepsilon,
+\]
+
+
+where $\varepsilon$ is skew-normal and independent of $(t,x)$.
+A location shift of a skew-normal variable preserves the skew-normal family:
+if $Z \sim \mathrm{SkewNormal}(\xi,\omega,\lambda)$, then $Z + c \sim \mathrm{SkewNormal}(\xi + c,\omega,\lambda)$.
+Thus
+
+
+\[
+Y \mid T=t,X=x \sim \mathrm{SkewNormal}\big(\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x,\ \omega,\ \lambda\big),
+\]
+
+
+and the density follows directly from \eqref{eq:skewnormal_density} with $\xi$ replaced by $\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x$.
+\end{proof}
+
+\subsection{Interventional density $f_{Y \mid \mathrm{do}(T=t)}$}
+
+\begin{theorem}[Interventional density in the skew-normal model]
+Under the same assumptions, the interventional density of $Y$ under $\mathrm{do}(T=t)$ is
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \int \frac{2}{\omega}\,
+      \phi\!\left(\frac{y - (\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x)}{\omega}\right)\,
+      \Phi\!\left(\lambda\, \frac{y - (\xi + \bm{\alpha}^\top t + \bm{\beta}^\top x)}{\omega}\right)\,
+      f_X(x)\, \mathrm{d}x.
+    \label{eq:model1_interventional_density_general}
+\end{equation}
+If $\bm{\beta} = \bm{0}$, then
+\begin{equation}
+    Y \mid \mathrm{do}(T=t) \sim \mathrm{SkewNormal}\big(\xi + \bm{\alpha}^\top t,\ \omega,\ \lambda\big),
+    \label{eq:model1_interventional_law_simple}
+\end{equation}
+with explicit density
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \frac{2}{\omega}\,
+      \phi\!\left(\frac{y - (\xi + \bm{\alpha}^\top t)}{\omega}\right)\,
+      \Phi\!\left(\lambda\, \frac{y - (\xi + \bm{\alpha}^\top t)}{\omega}\right).
+    \label{eq:model1_interventional_density_simple}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The general expression \eqref{eq:model1_interventional_density_general} follows from the backdoor formula \eqref{eq:backdoor} and the conditional density \eqref{eq:model1_conditional_density}.
+If $\bm{\beta} = \bm{0}$, then $Y$ does not depend on $X$ given $T$, and
+
+
+\[
+Y \mid T=t,X=x \sim \mathrm{SkewNormal}\big(\xi + \bm{\alpha}^\top t,\ \omega,\ \lambda\big)
+\]
+
+
+for all $x$.
+Hence
+
+
+\[
+f_{Y \mid \mathrm{do}(T=t)}(y)
+= \int f_{Y \mid T=t,X=x}(y)\, f_X(x)\, \mathrm{d}x
+= f_{Y \mid T=t,X=x}(y),
+\]
+
+
+which is \eqref{eq:model1_interventional_density_simple}.
+\end{proof}
+
+\subsection{Pseudocode and parameters}
+
+\begin{algorithm}[h]
+\caption{Data generation for the skew-normal model}
+\begin{algorithmic}[1]
+\STATE Choose dimensions $p$ and $d$.
+\STATE Set parameters: $\bm{\mu}_X \in \mathbb{R}^p$, $\Sigma_X \in \mathbb{R}^{p \times p}$, $\bm{\mu}_T \in \mathbb{R}^d$, $\Sigma_T \in \mathbb{R}^{d \times d}$, correlation between $X$ and $T$, $\bm{\alpha} \in \mathbb{R}^d$, $\bm{\beta} \in \mathbb{R}^p$, and skew-normal parameters $(\xi,\omega,\lambda)$.
+\FOR{$i = 1$ \TO $n$}
+    \STATE Sample $(X_i, T_i)$ from the joint Gaussian distribution.
+    \STATE Sample $\varepsilon_i \sim \mathrm{SkewNormal}(\xi,\omega,\lambda)$.
+    \STATE Set $Y_i = \bm{\alpha}^\top T_i + \bm{\beta}^\top X_i + \varepsilon_i$.
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Model 2: Gaussian mixture outcome (multimodality)}
+
+\subsection{Data-generating mechanism}
+
+Let $X$ and $T$ be as before (jointly Gaussian, correlated).
+Introduce a latent regime variable
+
+
+\[
+Z \in \{1,\dots,K\}, \quad \mathbb{P}(Z=k) = \pi_k,\quad \sum_{k=1}^K \pi_k = 1,
+\]
+
+
+independent of $(X,T)$.
+Define
+\begin{equation}
+    Y \mid T=t, X=x, Z=k \sim \mathcal{N}\big(\mu_k + \bm{\alpha}_k^\top t + \bm{\beta}_k^\top x,\ \sigma_k^2\big),
+    \label{eq:model2_conditional_given_Z}
+\end{equation}
+with $\bm{\alpha}_k \in \mathbb{R}^d$, $\bm{\beta}_k \in \mathbb{R}^p$, and $\sigma_k^2 > 0$.
+
+\subsection{Conditional density $f_{Y \mid T=t, X=x}$}
+
+\begin{theorem}[Conditional density in the Gaussian mixture model]
+Under \eqref{eq:model2_conditional_given_Z}, the conditional density of $Y$ given $(T=t,X=x)$ is
+\begin{equation}
+    f_{Y \mid T=t, X=x}(y)
+    = \sum_{k=1}^K \pi_k\, \varphi\big(y;\mu_k + \bm{\alpha}_k^\top t + \bm{\beta}_k^\top x,\ \sigma_k^2\big),
+    \label{eq:model2_conditional_density}
+\end{equation}
+where
+
+
+\[
+\varphi(y;m,s^2)
+= \frac{1}{\sqrt{2\pi s^2}} \exp\left(-\frac{(y-m)^2}{2s^2}\right)
+\]
+
+
+is the Gaussian density with mean $m$ and variance $s^2$.
+\end{theorem}
+
+\begin{proof}
+Conditioning on $(T=t,X=x)$, the only remaining randomness is $Z$ and $Y$ given $Z$.
+By the law of total probability,
+
+
+\[
+f_{Y \mid T=t,X=x}(y)
+= \sum_{k=1}^K \mathbb{P}(Z=k)\, f_{Y \mid T=t,X=x,Z=k}(y)
+= \sum_{k=1}^K \pi_k\, \varphi\big(y;\mu_k + \bm{\alpha}_k^\top t + \bm{\beta}_k^\top x,\ \sigma_k^2\big),
+\]
+
+
+which is \eqref{eq:model2_conditional_density}.
+\end{proof}
+
+\subsection{Interventional density $f_{Y \mid \mathrm{do}(T=t)}$}
+
+\begin{theorem}[Interventional density in the Gaussian mixture model]
+The interventional density of $Y$ under $\mathrm{do}(T=t)$ is
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \int \sum_{k=1}^K \pi_k\, \varphi\big(y;\mu_k + \bm{\alpha}_k^\top t + \bm{\beta}_k^\top x,\ \sigma_k^2\big)\,
+      f_X(x)\, \mathrm{d}x.
+    \label{eq:model2_interventional_density_general}
+\end{equation}
+If $\bm{\beta}_k = \bm{0}$ for all $k$, then
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \sum_{k=1}^K \pi_k\, \varphi\big(y;\mu_k + \bm{\alpha}_k^\top t,\ \sigma_k^2\big),
+    \label{eq:model2_interventional_density_simple}
+\end{equation}
+which is a Gaussian mixture with $K$ components.
+\end{theorem}
+
+\begin{proof}
+The general expression \eqref{eq:model2_interventional_density_general} follows from the backdoor formula \eqref{eq:backdoor} and the conditional density \eqref{eq:model2_conditional_density}.
+If $\bm{\beta}_k = \bm{0}$ for all $k$, then $Y$ does not depend on $X$ given $(T,Z)$, and
+
+
+\[
+f_{Y \mid T=t,X=x}(y)
+= \sum_{k=1}^K \pi_k\, \varphi\big(y;\mu_k + \bm{\alpha}_k^\top t,\ \sigma_k^2\big)
+\]
+
+
+for all $x$.
+Integrating over $x$ yields \eqref{eq:model2_interventional_density_simple}.
+\end{proof}
+
+\subsection{Pseudocode and parameters}
+
+\begin{algorithm}[h]
+\caption{Data generation for the Gaussian mixture model}
+\begin{algorithmic}[1]
+\STATE Choose dimensions $p$ and $d$, number of components $K$.
+\STATE Set parameters: $\bm{\mu}_X$, $\Sigma_X$, $\bm{\mu}_T$, $\Sigma_T$, mixture weights $(\pi_k)_{k=1}^K$, means $(\mu_k)$, coefficients $(\bm{\alpha}_k,\bm{\beta}_k)$, variances $(\sigma_k^2)$.
+\FOR{$i = 1$ \TO $n$}
+    \STATE Sample $(X_i, T_i)$ from the joint Gaussian distribution.
+    \STATE Sample $Z_i \in \{1,\dots,K\}$ with $\mathbb{P}(Z_i=k) = \pi_k$.
+    \STATE Sample $Y_i \sim \mathcal{N}\big(\mu_{Z_i} + \bm{\alpha}_{Z_i}^\top T_i + \bm{\beta}_{Z_i}^\top X_i,\ \sigma_{Z_i}^2\big)$.
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Model 3: Student-\texorpdfstring{$t$}{t} outcome (heavy tails)}
+
+\subsection{Data-generating mechanism}
+
+Let $X$ and $T$ be as before (jointly Gaussian, correlated).
+Define
+\begin{equation}
+    Y = \bm{\alpha}^\top T + \bm{\beta}^\top X + \varepsilon,
+    \label{eq:model3_Y}
+\end{equation}
+where $\bm{\alpha} \in \mathbb{R}^d$, $\bm{\beta} \in \mathbb{R}^p$, and
+
+
+\[
+\varepsilon \sim t_\nu(0,\sigma^2)
+\]
+
+
+is a Student-$t$ random variable with $\nu > 0$ degrees of freedom and scale $\sigma^2$, independent of $(X,T)$.
+The density of $Z \sim t_\nu(m,\sigma^2)$ is
+\begin{equation}
+    f_Z(z)
+    = \frac{\Gamma\big(\frac{\nu+1}{2}\big)}{\Gamma\big(\frac{\nu}{2}\big)\sqrt{\nu\pi}\,\sigma}
+      \left[1 + \frac{1}{\nu}\left(\frac{z-m}{\sigma}\right)^2\right]^{-\frac{\nu+1}{2}}.
+    \label{eq:t_density}
+\end{equation}
+
+\subsection{Conditional density $f_{Y \mid T=t, X=x}$}
+
+\begin{theorem}[Conditional density in the Student-$t$ model]
+Under \eqref{eq:model3_Y}, for any $(t,x)$,
+\begin{equation}
+    Y \mid T=t, X=x \sim t_\nu\big(\bm{\alpha}^\top t + \bm{\beta}^\top x,\ \sigma^2\big),
+    \label{eq:model3_conditional_law}
+\end{equation}
+with density
+\begin{equation}
+    f_{Y \mid T=t, X=x}(y)
+    = \frac{\Gamma\big(\frac{\nu+1}{2}\big)}{\Gamma\big(\frac{\nu}{2}\big)\sqrt{\nu\pi}\,\sigma}
+      \left[1 + \frac{1}{\nu}\left(\frac{y - (\bm{\alpha}^\top t + \bm{\beta}^\top x)}{\sigma}\right)^2\right]^{-\frac{\nu+1}{2}}.
+    \label{eq:model3_conditional_density}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Conditioning on $(T=t,X=x)$, we have
+
+
+\[
+Y = \bm{\alpha}^\top t + \bm{\beta}^\top x + \varepsilon,
+\]
+
+
+where $\varepsilon \sim t_\nu(0,\sigma^2)$.
+A location shift of a Student-$t$ variable preserves the Student-$t$ family:
+if $Z \sim t_\nu(0,\sigma^2)$, then $Z + c \sim t_\nu(c,\sigma^2)$.
+Thus
+
+
+\[
+Y \mid T=t,X=x \sim t_\nu\big(\bm{\alpha}^\top t + \bm{\beta}^\top x,\ \sigma^2\big),
+\]
+
+
+and the density follows from \eqref{eq:t_density}.
+\end{proof}
+
+\subsection{Interventional density $f_{Y \mid \mathrm{do}(T=t)}$}
+
+\begin{theorem}[Interventional density in the Student-$t$ model]
+The interventional density of $Y$ under $\mathrm{do}(T=t)$ is
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \int \frac{\Gamma\big(\frac{\nu+1}{2}\big)}{\Gamma\big(\frac{\nu}{2}\big)\sqrt{\nu\pi}\,\sigma}
+      \left[1 + \frac{1}{\nu}\left(\frac{y - (\bm{\alpha}^\top t + \bm{\beta}^\top x)}{\sigma}\right)^2\right]^{-\frac{\nu+1}{2}}
+      f_X(x)\, \mathrm{d}x.
+    \label{eq:model3_interventional_density_general}
+\end{equation}
+If $\bm{\beta} = \bm{0}$, then
+\begin{equation}
+    Y \mid \mathrm{do}(T=t) \sim t_\nu\big(\bm{\alpha}^\top t,\ \sigma^2\big),
+    \label{eq:model3_interventional_law_simple}
+\end{equation}
+with explicit density
+\begin{equation}
+    f_{Y \mid \mathrm{do}(T=t)}(y)
+    = \frac{\Gamma\big(\frac{\nu+1}{2}\big)}{\Gamma\big(\frac{\nu}{2}\big)\sqrt{\nu\pi}\,\sigma}
+      \left[1 + \frac{1}{\nu}\left(\frac{y - \bm{\alpha}^\top t}{\sigma}\right)^2\right]^{-\frac{\nu+1}{2}}.
+    \label{eq:model3_interventional_density_simple}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The general expression \eqref{eq:model3_interventional_density_general} follows from the backdoor formula and \eqref{eq:model3_conditional_density}.
+If $\bm{\beta} = \bm{0}$, then $Y$ does not depend on $X$ given $T$, and
+
+
+\[
+Y \mid T=t,X=x \sim t_\nu\big(\bm{\alpha}^\top t,\ \sigma^2\big)
+\]
+
+
+for all $x$.
+Integrating over $x$ yields \eqref{eq:model3_interventional_density_simple}.
+\end{proof}
+
+\subsection{Pseudocode and parameters}
+
+\begin{algorithm}[h]
+\caption{Data generation for the Student-$t$ model}
+\begin{algorithmic}[1]
+\STATE Choose dimensions $p$ and $d$.
+\STATE Set parameters: $\bm{\mu}_X$, $\Sigma_X$, $\bm{\mu}_T$, $\Sigma_T$, coefficients $\bm{\alpha}$, $\bm{\beta}$, degrees of freedom $\nu$, scale $\sigma^2$.
+\FOR{$i = 1$ \TO $n$}
+    \STATE Sample $(X_i, T_i)$ from the joint Gaussian distribution.
+    \STATE Sample $\varepsilon_i \sim t_\nu(0,\sigma^2)$.
+    \STATE Set $Y_i = \bm{\alpha}^\top T_i + \bm{\beta}^\top X_i + \varepsilon_i$.
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Summary of simulation setups}
+
+Table~\ref{tab:simulation_setups} summarizes the different data-generating mechanisms, their key parameters, and the qualitative properties of the interventional density.
+
+\begin{table}[h]
+\centering
+\caption{Summary of synthetic causal models for interventional density experiments.}
+\label{tab:simulation_setups}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+Model & $X$ and $T$ & Outcome $Y$ & Key parameters & Properties of $f_{Y \mid \mathrm{do}(T=t)}$ \\ \midrule
+Skew-normal &
+Joint Gaussian &
+$\bm{\alpha}^\top T + \bm{\beta}^\top X + \varepsilon$ &
+$\bm{\alpha}, \bm{\beta}, \xi, \omega, \lambda$ &
+Skewed (skew-normal), explicit density \
+
+\[0.3em]
+Gaussian mixture &
+Joint Gaussian &
+Regime-specific Gaussian &
+$\pi_k, \mu_k, \bm{\alpha}_k, \bm{\beta}_k, \sigma_k^2$ &
+Multimodal (mixture), explicit density \
+
+\[0.3em]
+Student-$t$ &
+Joint Gaussian &
+$\bm{\alpha}^\top T + \bm{\beta}^\top X + \varepsilon$ &
+$\bm{\alpha}, \bm{\beta}, \nu, \sigma^2$ &
+Heavy-tailed (Student-$t$), explicit density \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
