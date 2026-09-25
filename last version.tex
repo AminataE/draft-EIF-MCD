@@ -134,8 +134,7 @@ re-express the same correction through the contrastive factorization. The genera
 propensity score then disappears from the formula; in exchange, the correction now requires
 the influence function of the fitted contrast function, whose training sample is built from
 the data and which therefore behaves unlike the influence function of an ordinarily trained
-model. We compute this influence function in closed form for a penalized logistic contrast
-and assemble the IF-corrected estimator.
+model.
 \end{abstract}
 
 \section{Introduction}
@@ -179,12 +178,7 @@ embedding (\textsc{dkme}, \citealp{muandet2021counterfactual}) and an A-IPTW ker
 (\textsc{kde}, \citealp{kim2018distributional}). Separately, \citet{ham2024logconcave} impose
 log-concavity on the counterfactual density, and \citet{martinez2023stein} avoid an explicit
 density representation altogether, via kernel Stein discrepancies. All of the above assume a
-treatment with finitely many levels; Appendix~\ref{app:glossary} tabulates every estimator
-abbreviation used here, and Appendix~\ref{app:abbrev} every other abbreviation used in the
-paper. They are not part of the simulation study of Section~\ref{sec:simulation}, which is
-confined to the IF-corrected estimator and its two discriminants (Section~\ref{sec:sim-dgp}),
-but a broader comparison against this same list, on the real and semi-synthetic datasets of
-\citet{melnychuk2023flows}, is under way in a companion, more applied chapter.
+treatment with finitely many levels.
 
 This paper treats the continuous case, which is both more common in applications and harder
 in theory. Doses, durations, concentrations and continuous policy instruments are not
@@ -218,8 +212,8 @@ the whole procedure.
 
 Marginal contrastive discrimination (MCD) \citep{meziani2025mcd} is designed for exactly this
 asymmetry. It writes the conditional density as a univariate marginal times a density ratio,
-and estimates the ratio by a binary classifier that separates observed vectors from vectors
-whose outcome has been resampled from its own marginal. No density on a high-dimensional
+and estimates the ratio by a binary classifier that separates genuine observations from
+recombined ones, in which the outcome has been resampled from its own marginal. No density on a high-dimensional
 space is ever fitted: the marginal is univariate, and the ratio is recovered by
 classification, a problem any supervised learner can solve. The same principle underlies
 noise-contrastive estimation \citep{gutmann2010nce} and classification-based density-ratio
@@ -442,8 +436,7 @@ over $X_1,\dots,X_n$ alone. Each term then has the same expectation, so
 \end{equation}
 the average error of the conditional-density estimate. Nothing forces this quantity to vanish:
 if $\widehat\eta$ over- or under-estimates $\eta$ on average, so does the plug-in. The offset
-is a property of the back-door average itself, shared by every conditional-density estimator,
-not an accident of any particular $\widehat\eta$.
+is a property of the back-door average itself, shared by every conditional-density estimator.
 
 The right-hand side of~\eqref{eq:plugin-bias} is what the semiparametric literature calls the
 first-order bias of the plug-in, and the name deserves a word of caution, since it is not the
@@ -477,7 +470,7 @@ systematic distortion of the whole curve $y\mapsto\widehat p^{\,\mathrm{pi}}_t(y
 motivate estimating a density, tail probabilities, dispersion, the chance of exceeding a
 threshold, are functionals of this curve, and each inherits the distortion. Correcting the
 first-order bias is thus a prerequisite for the inferences the interventional density is meant
-to support, not a cosmetic refinement.
+to support.
 
 The remedy is to make the nuisance enter only at second order. A second-order term is
 quadratic in $\widehat\eta-\eta$, of order $\|\widehat\eta-\eta\|^2$, which is $o(n^{-1/2})$ as
@@ -659,7 +652,7 @@ $K_{h_Y}$ and weighted by how close its treatment is to $t$ divided by how likel
 receive that treatment given its covariates, so that units unlikely to be treated at $t$ are
 correspondingly up-weighted. That last feature is also its weakness: where $\gps(t\mid x)$ is
 small the weight is large, a handful of observations dominate the average, and the variance
-degrades --- the more so here, since $K_{h_T}$ concentrates the sum on the few units whose
+degrades. Here $K_{h_T}$ concentrates the sum on the few units whose
 treatment lands within $h_T$ of $t$, and a vector treatment makes those few fewer still. The
 classical estimator~\eqref{eq:est-classical} is the third, and regrouping its summand makes
 the construction visible:
@@ -798,8 +791,8 @@ $\widetilde Y \sim \pf{Y}$ drawn independently of $(T,X)$. Then $\contrast(t,x,y
 $\pP[Z=1 \mid W=(t,x,y)]$, so recovering the contrast function is a supervised classification
 problem: tell a genuine triple from one whose outcome has been swapped for an independent
 draw. In practice one builds a contrastive dataset
-$\mDwz{N}=\{(W_i,Z_i)\}_{i=1}^{N}$, the condition $\MDC(\ratio)$ of \citet{meziani2025mcd}
---- by labelling each observed vector $Z=1$ and adjoining vectors with resampled outcomes
+$\mDwz{N}=\{(W_i,Z_i)\}_{i=1}^{N}$, the condition $\MDC(\ratio)$ of \citet{meziani2025mcd},
+by labelling each observed vector $Z=1$ and adjoining vectors with resampled outcomes
 labelled $Z=0$.
 
 The classifier and the density ratio encode the same information, so either recovers the
@@ -843,7 +836,7 @@ Two features of the construction are worth flagging now, because the whole of
 Section~\ref{sec:mcd-correction} turns on them, one favourably and one not. Favourably: because
 the classifier only ever compares observed vectors with recombined ones, it works on the
 support of the joint law rather than the ambient space, which is why the construction stays
-feasible when $d+p$ is large \citep{meziani2025mcd} --- and why $\eta$ is recovered without any
+feasible when $d+p$ is large \citep{meziani2025mcd}, and why $\eta$ is recovered without any
 density on $\cT\times\cX$ ever being fitted. Unfavourably: the negative class is built from the
 data by recombination, so the classifier's training law is itself a functional of $F$.
 Perturbing $F$ therefore perturbs what the classifier was trained on, and its influence
@@ -863,7 +856,7 @@ differentiated the target in its back-door form~\eqref{eq:target}, in which the 
 density appears as a single object, and the derivative produced the generalized propensity
 score. Substituting~\eqref{eq:reformulation} instead gives the same functional written in terms
 of $\pf{Y}$ and $\DensityRatio$, and differentiating \emph{that} gives the same influence
-function in a different, equal expression --- one in which, as
+function in a different, equal expression. In this one, as
 Section~\ref{sec:mcd-form} shows, $\gps$ does not appear at all. This is the paper's central
 move, and it is available only because the nuisance estimator has this particular structure.
 The rest of the section builds the estimator that the new expression supports, and computes the
@@ -1056,28 +1049,49 @@ channels, as each discriminant treated below will show explicitly.
 \subsection{A common differentiable classifier form}
 \label{sec:mcd-general-classifier}
 
-Everything that follows is derived once, here, for an arbitrary differentiable discriminant.
-Sections~\ref{sec:mcd-logistic} and~\ref{sec:mcd-mlp} are then applications of this one
-derivation, and contain only what is specific to each. Let $F_\beta:\cW\to\R$ be a
-differentiable logit and write
+This section fixes the class of discriminants the rest of the paper corrects, and derives its
+influence function once, for the whole class at once. Sections~\ref{sec:mcd-logistic}
+and~\ref{sec:mcd-mlp} then instantiate it.
+
+\begin{mydef}[Differentiable discriminant]
+\label{def:diff-discriminant}
+A \emph{differentiable discriminant} is a classifier
 \begin{equation}
 D_\beta(w)=\sigma\big(F_\beta(w)\big),
 \qquad
-J_\beta(w):=\nabla_\beta F_\beta(w),
+\sigma(u)=(1+e^{-u})^{-1},
 \label{eq:general-logit}
 \end{equation}
-with $\sigma(u)=(1+e^{-u})^{-1}$. The penalized contrastive risk, its gradient and its
-minimizer are
+fit by minimizing the penalized log-loss risk
 \begin{equation}
 \cR_\lambda(\beta;F)
 =\pE_{P_\ratio}\big[\ell(D_\beta(W),Z)\big]
 +\lambda\|\beta\|_2^2,
 \qquad
+\ell(D,z)=-z\log D-(1-z)\log(1-D),
+\qquad
 \beta_\lambda(F) := \arg\min_\beta \cR_\lambda(\beta;F),
 \label{eq:criterion}
 \end{equation}
-with $\ell(D,z)=-z\log D-(1-z)\log(1-D)$ the logistic loss and $\lambda \ge 0$. Write
-$G(\beta,F):=\nabla_\beta\cR_\lambda(\beta;F)$, so that an interior minimizer solves
+where the logit $F_\beta:\cW\to\R$ is differentiable in $\beta$, with
+$J_\beta(w):=\nabla_\beta F_\beta(w)$, and $\lambda \ge 0$.
+\end{mydef}
+
+Two choices in Definition~\ref{def:diff-discriminant} are fixed for the whole class: the link
+$\sigma$ and the loss $\ell$. They enter the derivation below through a single cancellation,
+$\nabla_\beta D_\beta = D_\beta(1-D_\beta)J_\beta$ combined with
+$\partial_D\ell = (D-z)/(D(1-D))$; a probit link or a hinge loss would give a different
+cancellation, and Theorem~\ref{thm:channels} below would have to be rederived for it. The
+architecture of $F_\beta$ is what varies: logistic regression (Section~\ref{sec:mcd-logistic})
+and the multilayer perceptron (Section~\ref{sec:mcd-mlp}) are two instances of
+Definition~\ref{def:diff-discriminant}, and any other differentiable network would be a third.
+A classifier without a well-defined $\nabla_\beta F_\beta$, a decision tree or a
+gradient-boosted ensemble grown by greedy splits, falls outside
+Definition~\ref{def:diff-discriminant} altogether; correcting one requires reducing it to the
+definition first, by freezing its non-differentiable structure and fitting only a
+differentiable head on top of it.
+
+Write $G(\beta,F):=\nabla_\beta\cR_\lambda(\beta;F)$, so that an interior minimizer solves
 \begin{equation}
 G\big(\beta_\lambda(F),F\big)=0 ,
 \label{eq:general-foc}
@@ -1092,11 +1106,11 @@ $\beta_\lambda(F)$; the Hessian $H_\lambda$ is invertible; and $D_{\beta_\lambda
 away from $0$ and $1$ on the support of $P_\ratio$.
 \end{assumption}
 
-Assumption~\ref{as:regularity} is what the implicit function theorem needs, and no more. The
-two discriminants below differ in exactly one respect: whether it is a consequence of the
-specification or a hypothesis about the fitted point. For an affine logit it is a proposition
-(Section~\ref{sec:mcd-logistic}); for a network it must be posited
-(Section~\ref{sec:mcd-mlp}).
+Assumption~\ref{as:regularity} is what the implicit function theorem needs on top of
+Definition~\ref{def:diff-discriminant}, and no more. The two discriminants below differ in
+exactly one respect: whether it is a consequence of the specification or a hypothesis about the
+fitted point. For an affine logit it is a proposition (Section~\ref{sec:mcd-logistic}); for a
+network it must be posited (Section~\ref{sec:mcd-mlp}).
 
 The chain rule for the logistic loss gives $\nabla_\beta\ell(D_\beta(w),z)
 =\big(D_\beta(w)-z\big)J_\beta(w)$, so that with
@@ -1315,7 +1329,7 @@ needed and makes the conditional-bias identity~\eqref{eq:plugin-bias} hold exact
 \end{algorithmic}
 \end{algorithm}
 
-Two costs are worth reading off the algorithm, because they are what the next two sections
+Two costs are worth reading off the algorithm, because they are what the next two subsections
 trade against each other. Step~5 is paid once, not once per observation: the Hessian is a
 single average over $\Dctr$, prepared once and reused at every evaluation point. Step~7 is the
 inner Monte Carlo, and subsampling it over $S_{\mathrm{mc}}$ draws brings the loop to $S_{\mathrm{mc}}$ evaluations of
@@ -1339,8 +1353,8 @@ enters the construction.
 For the theoretical cross-fitted procedure, the fitting data set $\Dfit$ supplies both the
 contrastive rows $(W,Z)$ used to fit the classifier and the original outcomes $Y$ used to
 estimate the univariate marginal $\widehat p_Y$. The held-out original observations
-$W\in\Deval$ are used only to evaluate the influence function. This separation is a
-proof device, not a requirement of the MCD factorization itself. In the original MCD
+$W\in\Deval$ are used only to evaluate the influence function. This separation serves the
+proof; the MCD factorization itself does not require it. In the original MCD
 experiments, the implementation estimates $\widehat p_Y$ by a univariate KDE using all
 outcomes $\{Y_i\}$ from the original sample; the recombined rows are not additional
 observations for this KDE. The diagrams make the theoretical split explicit and label this
@@ -1466,22 +1480,16 @@ The cross-fitted procedure described here is the EIF extension of the original M
 %
 
 \fi
-\section{The penalized logistic discriminant}
+\subsection{The penalized logistic discriminant}
 \label{sec:mcd-logistic}
 
-The first application of Section~\ref{sec:mcd-general-classifier} takes $F_\beta$ affine in
-$\beta$. There are two reasons for starting here. It is the loss and the parameterization
-under which \citet{meziani2025mcd} establish the Bayes optimality of the contrast function, so
-it is the natural case to correct; and it is the one case in which
-Assumption~\ref{as:regularity} is not an assumption at all but a consequence of the
-specification. Nothing else in this section is new: Theorem~\ref{thm:channels},
-Proposition~\ref{prop:closed-form}, Lemma~\ref{lem:zero-mean} and
-Corollary~\ref{cor:collapse} apply verbatim, and Algorithm~\ref{alg:generic} runs unchanged.
-What follows records only what is particular to this choice.
+The first application takes $F_\beta$ affine in $\beta$, the parameterization under which
+\citet{meziani2025mcd} establish the Bayes optimality of the contrast function.
+Theorem~\ref{thm:channels}, Proposition~\ref{prop:closed-form}, Lemma~\ref{lem:zero-mean} and
+Corollary~\ref{cor:collapse} apply verbatim; only the specification below is new.
 
-\subsection{Specification}
+\paragraph{Specification.}
 \label{sec:mcd-logistic-spec}
-
 Let $\phi:\cW\to\R^{\ks}$ be a fixed feature map and set
 \begin{equation}
 F_\beta(w) = \beta^\top\phi(w),
@@ -1491,7 +1499,6 @@ J_\beta(w) = \phi(w)
 \nabla^2_\beta F_\beta \equiv 0 .
 \label{eq:logistic-logit}
 \end{equation}
-The Jacobian is the feature map itself, and it does not depend on $\beta$.
 
 \begin{assumption}[Regularity, logistic discriminant]
 \label{as:smooth}
@@ -1502,24 +1509,15 @@ away from $0$ and $1$ on the support of $P_\ratio$.
 \begin{mypropo}[Assumption~\ref{as:regularity} holds, and globally]
 \label{prop:logistic-regularity}
 Under Assumption~\ref{as:smooth}, the criterion~\eqref{eq:criterion} is strictly convex, so
-$\beta_\lambda(F)$ exists, is unique and is interior; $H_\lambda^{\mathrm{curv}} = 0$, so
-$H_\lambda = H_\lambda^{\mathrm{GN}}$; and every eigenvalue of $H_\lambda$ is at least
-$2\lambda$, at every $\beta$ and not only at $\beta_\lambda(F)$.
+$\beta_\lambda(F)$ exists, is unique and is interior; $H_\lambda^{\mathrm{curv}} = 0$; and every
+eigenvalue of $H_\lambda$ is at least $2\lambda$, at every $\beta$. Proof in
+Appendix~\ref{app:logistic-grads}, which also covers the unpenalized case $\lambda=0$,
+admissible provided $\phi$ is not collinear on the support.
 \end{mypropo}
 
-Appendix~\ref{app:logistic-grads} proves it, and the proof is short: with
-$\nabla^2_\beta F_\beta \equiv 0$ the curvature term of~\eqref{eq:general-hessian-split}
-vanishes identically, leaving a positive-semidefinite Gram matrix plus $2\lambda I$. The
-unpenalized case $\lambda = 0$ remains admissible provided $\phi$ is not collinear on the
-support. This is the distinction that Section~\ref{sec:mcd-mlp} loses:
-Assumption~\ref{as:smooth} constrains the \emph{specification}, and invertibility follows as a
-theorem, uniformly in $\beta$.
-
-\subsection{What the general results become}
+\paragraph{Closed form.}
 \label{sec:mcd-logistic-closed-form}
-
-Substituting $J_\beta=\phi$ into Section~\ref{sec:mcd-general-classifier} gives the estimator
-in fully explicit form. The score~\eqref{eq:S} reads
+Substituting $J_\beta=\phi$, the score~\eqref{eq:S} becomes
 \begin{equation}
 \score(w;\beta)
 = \ratio\big( D_\beta(w) - 1 \big)\phi(w)
@@ -1527,122 +1525,34 @@ in fully explicit form. The score~\eqref{eq:S} reads
 + 2\lambda\beta_\lambda ,
 \label{eq:S-logistic}
 \end{equation}
-with the three averaged feature vectors of~\eqref{eq:b-channels} taken at $J_\beta=\phi$, and
-the collapse vector of Corollary~\ref{cor:collapse} is
-$a_\lambda(t,y) = \pE_X[\DensityRatio(t,X,y)\,\phi(t,X,y)]$. Three consequences are worth
-naming, because they are exactly what the neural-network case gives up.
+with $a_\lambda(t,y) = \pE_X[\DensityRatio(t,X,y)\,\phi(t,X,y)]$ in Corollary~\ref{cor:collapse}.
+Because $\phi$ is fixed, $H_\lambda$ ($\ks\times\ks$) is factorized once per fold, so every
+subsequent solve is a triangular solve rather than a fresh $\cO(\ks^3)$ inversion, and
+$b_{TX},b_Y$ are Monte Carlo averages of $D_\beta\phi$ with no backward pass in the loop.
 
-\begin{itemize}
-\item \emph{The Hessian is small, fixed and factorizable.} It is $\ks\times\ks$ with
-$\ks$ chosen by the analyst, it does not move with $\beta$ beyond the scalar weights
-$D_\beta(1-D_\beta)$, and step~5 of Algorithm~\ref{alg:generic} can form it explicitly and
-take a single Cholesky factorization per fold. Every subsequent solve
-$\widehat H_\lambda\widehat\xi(t,y)=\widehat a_\lambda(t,y)$ is then a triangular solve rather
-than a fresh $\cO(\ks^3)$ inversion.
-\item \emph{The inner Monte Carlo is over a fixed map.} Since $\phi$ does not depend on
-$\beta$, $b_{TX}$ and $b_Y$ are averages of $D_\beta\phi$ over resampled draws with no
-backward pass anywhere in the loop, bringing step~7 to $\cO(n S_{\mathrm{mc}}\ks)$ arithmetic.
-\item \emph{No local hypothesis is carried.} By
-Proposition~\ref{prop:logistic-regularity} the linear system of Corollary~\ref{cor:collapse}
-is solvable by construction, with an explicit lower bound $2\lambda$ on the spectrum, so
-nothing needs to be checked at run time.
-\end{itemize}
-
-\subsection{Implementation}
+\paragraph{Implementation.}
 \label{sec:mcd-algorithm-logistic}
-
 \begin{remark}[Implementation]
 \label{rem:impl-logistic}
-Three details of Algorithm~\ref{alg:generic}, left generic above, are fixed to specific
-choices in the implementation used for Section~\ref{sec:simulation}, and are worth recording here
-rather than only in code. First, $\widehat H_\lambda$ (step~5) is factorized once per fold by a
-Cholesky decomposition, as just described. Second, $\lambda$ defaults to $0.5$ regardless of $\ks$: a value an order
-of magnitude larger than what bare well-specification arguments would suggest, adopted after
-direct measurement (Appendix~\ref{app:cv}) showed that a small $\lambda$ leaves $\betahat_\lambda$
-overconfident whenever $\phi$ is even mildly misspecified for the data-generating process --
-harmless for the plug-in estimate, which only needs $\widehat{\DensityRatio}$ to be reasonable,
-but propagated by~\eqref{eq:S} directly into $\widehat\score$ and hence into the correction term.
-Third, the Monte Carlo average defining $\widehat b_{TX},\widehat b_Y$ (step~7) is computed in
-batches capped so that no single batch exceeds a fixed number of scalar entries, independently of
-$\ks$; this keeps memory use bounded on a GPU as $\ks$ grows into the thousands, at no change to
-the value being estimated, only to how it is accumulated. All three choices are orthogonal to the
-theory of Sections~\ref{sec:mcd-general-classifier}--\ref{sec:mcd-logistic-closed-form}, which holds for
-any $\lambda>0$ and any exact evaluation of the same sums; they matter only for the wall-clock and
-memory cost measured in Appendix~\ref{app:compute}.
+Three choices fix Algorithm~\ref{alg:generic} for Section~\ref{sec:simulation}.
+$\widehat H_\lambda$ (step~5) is factorized once per fold by Cholesky decomposition. $\lambda$
+defaults to $0.5$ regardless of $\ks$, an order of magnitude above bare well-specification
+arguments, after direct measurement (Appendix~\ref{app:cv}) showed a smaller value leaves
+$\betahat_\lambda$ overconfident whenever $\phi$ is mildly misspecified, a bias that
+propagates through~\eqref{eq:S} into the correction term. The Monte Carlo average defining
+$\widehat b_{TX},\widehat b_Y$ (step~7) is computed in batches capped independently of $\ks$, to
+bound memory use on a GPU as $\ks$ grows into the thousands (Appendix~\ref{app:compute}).
 \end{remark}
 
-\subsection{Asymptotics}
-\label{sec:mcd-asymptotics}
-
-\TODO{À voir.}
-%
-% ==== COMMENTÉ (Sec. 5 Asymptotics (body)) — à réactiver plus tard ====
-%
-% The contrast function is estimated within the parametric family indexed by $\phi$, and that
-% family need not contain the true $\contrast$. It is therefore natural to state the limit first
-% around the best parametric approximation and then, under an extra condition, around the true
-% target. Let
-% \begin{equation}
-% \theta_\lambda(t,y) := \pE_X\big[ \pf{Y}(y)\,\DensityRatio_{\beta_\lambda}(t,X,y) \big],
-% \qquad
-% \DensityRatio_{\beta} := \frac{1-\ratio}{\ratio}\,\frac{D_\beta}{1-D_\beta},
-% \label{eq:pseudo-true}
-% \end{equation}
-% be the functional evaluated at the minimizer $\beta_\lambda$ of~\eqref{eq:criterion}; it equals
-% $p_t(y)$ when the model contains the contrast function. Splitting the error at
-% $\theta_\lambda$,
-% \begin{equation}
-% \widehat p^{\,\mathrm{ifc}}_t(y) - p_t(y)
-% = \underbrace{\widehat p^{\,\mathrm{ifc}}_t(y) - \theta_\lambda(t,y)}_{\text{estimation}}
-% + \underbrace{\theta_\lambda(t,y) - p_t(y)}_{\text{approximation}} ,
-% \label{eq:decomposition}
-% \end{equation}
-% separates a stochastic estimation term from a deterministic approximation term, and the theorem
-% treats each in turn.
-%
-% \begin{theorem}[Asymptotic normality]
-% \label{thm:asymptotics}
-% Under Assumption~\ref{as:smooth}, cross-fitting, and the moment conditions of
-% Appendix~\ref{app:asymptotics-conditions}, the estimation term of~\eqref{eq:decomposition}
-% satisfies
-% \begin{equation}
-% \sqrt{n}\,\big( \widehat p^{\,\mathrm{ifc}}_t(y) - \theta_\lambda(t,y) \big)
-% \;\longrightarrow\; \mathcal{N}(0,V),
-% \qquad
-% V = \pf{Y}(y)^2\, a_\lambda^\top H_\lambda^{-1} \Sigma H_\lambda^{-1} a_\lambda ,
-% \label{eq:sandwich}
-% \end{equation}
-% with $\Sigma = \Var\big(\score(W;\beta_\lambda)\big)$. If in addition
-% $\|D_{\beta_\lambda} - \contrast\|_{L_2} = o(n^{-1/2})$ and $\ks_n/n \to 0$, the same statement
-% holds with $\theta_\lambda(t,y)$ replaced by $p_t(y)$.
-% \end{theorem}
-%
-% The proof is in Appendix~\ref{app:asymptotics-remainder}, and its logic is exactly the payoff
-% of the correction: the one-step construction reduces the estimation term to a second-order
-% quantity in $\betahat - \beta_\lambda$, which is the precise sense in which the first-order
-% bias~\eqref{eq:plugin-bias} has been removed. Because the variance is available in closed
-% form, confidence intervals require no resampling. The approximation term is deterministic and
-% enters linearly, and the additional condition of the theorem asks only that it be negligible
-% at the parametric scale; this is the standard requirement for sieve estimators
-% \citep{white1982,chen2007,farrell2021}.
-% ==== FIN COMMENTÉ (Sec. 5 Asymptotics (body)) ====
-%
-
-\section{The neural-network discriminant}
+\subsection{The neural-network discriminant}
 \label{sec:mcd-mlp}
 
-The second application takes $F_\beta$ nonlinear in $\beta$. Again, nothing in
-Section~\ref{sec:mcd-general-classifier} needs restating: Theorem~\ref{thm:channels},
-Proposition~\ref{prop:closed-form}, Lemma~\ref{lem:zero-mean} and
-Corollary~\ref{cor:collapse} hold as written, with $J_\beta$ now the network's logit Jacobian,
-and the closed-form estimator~\eqref{eq:estimator} is unchanged. What this section records is
-the one thing that does change, the Hessian, and the two consequences it has: a regularity
-condition that must be assumed rather than proved, and a linear solve that can no longer be a
-factorization.
+The second application takes $F_\beta$ nonlinear in $\beta$. Theorem~\ref{thm:channels},
+Proposition~\ref{prop:closed-form}, Lemma~\ref{lem:zero-mean} and Corollary~\ref{cor:collapse}
+hold as written, with $J_\beta$ the network's logit Jacobian; only the Hessian changes.
 
-\subsection{Specification}
+\paragraph{Specification.}
 \label{sec:mcd-mlp-spec}
-
 Let $F_\beta:\cW\to\R$ be a multilayer perceptron of fixed depth and width, $\beta$ collecting
 its $P$ weights, and $D_\beta(w)=\sigma(F_\beta(w))$. Then
 \begin{equation}
@@ -1651,88 +1561,39 @@ J_\beta(w) = \nabla_\beta F_\beta(w) \in \R^{P},
 \nabla^2_\beta F_\beta \not\equiv 0 ,
 \label{eq:mlp-logit}
 \end{equation}
-the Jacobian computed by one backward pass. $J_\beta$ plays the role $\phi$ played in
-Section~\ref{sec:mcd-logistic-spec}, with the one difference that drives everything below:
-$\phi$ was fixed, and $J_\beta$ depends on $\beta$.
+computed by one backward pass; unlike the fixed $\phi$ above, $J_\beta$ depends on $\beta$.
 
+\label{sec:mcd-mlp-ggn}
 \begin{assumption}[Local regularity]
 \label{as:smooth-mlp}
 Assumption~\ref{as:regularity} holds at the fitted stationary point $\beta_\lambda(F)$; in
 particular $H_\lambda$ is invertible there.
 \end{assumption}
 
-Assumption~\ref{as:smooth-mlp} has the same content as Assumption~\ref{as:smooth} and a
-different status, and the difference is the whole story of this section.
-Assumption~\ref{as:smooth} constrains the specification, and
-Proposition~\ref{prop:logistic-regularity} then \emph{derives} invertibility at every $\beta$.
-Assumption~\ref{as:smooth-mlp} instead posits it directly, \emph{at the one point
-$\beta_\lambda(F)$ that matters}, because nothing about a multilayer $F_\beta$ implies it.
-
-\subsection{Why it must be assumed}
-\label{sec:mcd-mlp-ggn}
-
-The reason is visible in the Hessian split~\eqref{eq:general-hessian-split}, which for a
-network retains both terms.
-
 \begin{mypropo}[Gauss--Newton decomposition]
 \label{prop:ggn}
 $H_\lambda^{\mathrm{GN}} \succeq 2\lambda I \succ 0$ always. $H_\lambda^{\mathrm{curv}} = 0$
-whenever $F_\beta$ is affine in $\beta$, and is sign-indefinite in general.
+whenever $F_\beta$ is affine in $\beta$, and is sign-indefinite in general, the generalized
+Gauss--Newton split of a model with a sigmoid link and a convex loss \citep{martens2020}.
 \end{mypropo}
 
-$H_\lambda^{\mathrm{GN}}$ is literally the Hessian of Appendix~\ref{app:logistic-grads} with
-$J_\beta$ in place of $\phi$, and is invertible for the same reason, at every $\beta$. What is
-new, and cannot be argued away, is $H_\lambda^{\mathrm{curv}}$: it is generically nonzero for
-a multilayer $F_\beta$, it carries no sign, and no argument available here rules out its
-cancelling part or all of $H_\lambda^{\mathrm{GN}}$'s positivity at the specific point
-$\beta_\lambda(F)$. That is exactly the content of Assumption~\ref{as:smooth-mlp}. It is small
-when $D_\beta(w)$ is close to $0$ or $1$ on $P_1$ and close to $0$ on $P_0$, that is, when the
-classifier already separates real from recombined vectors well: a heuristic in favour of the
-assumption being reasonable in practice, not a proof that it holds.
+Unlike the logistic case, $H_\lambda^{\mathrm{curv}}$ is generically nonzero for a multilayer
+$F_\beta$ and carries no sign, which is why Assumption~\ref{as:smooth-mlp} must be posited at
+$\beta_\lambda(F)$ rather than derived.
 
-\subsection{Solving against the Hessian}
+\paragraph{Solving against the Hessian.}
 \label{sec:mcd-algorithm-mlp}
+$H_\lambda$ is $P\times P$, ordinarily too large to form or factorize; every linear system is
+solved by an iterative method using Hessian-vector products alone (the Pearlmutter trick),
+never forming $\widehat H_\lambda$, as in \citet{kohliang2017}. The default target is the exact
+Hessian, solved by an indefinite-tolerant method (MINRES, or damped conjugate gradients); the
+Gauss--Newton matrix $\widehat H_\lambda^{\mathrm{GN}}$ is a cheaper, always-positive-definite
+fallback, accurate when the classifier already separates real from recombined vectors well.
+Assumption~\ref{as:smooth-mlp} is checked numerically after fitting, from the smallest
+eigenvalues of $\widehat H_\lambda$ (Lanczos) and the ratio
+$\|\widehat H_\lambda^{\mathrm{curv}}\|/\|\widehat H_\lambda^{\mathrm{GN}}\|$, which decides
+whether the cheaper Gauss--Newton solve is trustworthy.
 
-Two changes to step~5 of Algorithm~\ref{alg:generic} follow, and nothing else in it moves.
-First, $H_\lambda$ is $P\times P$ with $P$ the number of network weights, ordinarily far too
-large to form or factorize; every linear system in it is instead solved by an iterative method
-using Hessian-vector products alone, each costing one extra backward pass (the Pearlmutter
-trick) and never requiring $\widehat H_\lambda$ to be written down, as already used for this
-purpose by \citet{kohliang2017}. The Cholesky factorization of
-Section~\ref{sec:mcd-logistic-closed-form} is not available, so the solve is paid once per
-evaluation point rather than amortized over all of them.
-
-Second, which matrix to solve against is a modelling choice, not an implementation detail.
-Proposition~\ref{prop:ggn} guarantees $\widehat H_\lambda^{\mathrm{GN}}$ positive definite,
-but not $\widehat H_\lambda$ itself, and the two coincide only when
-$\widehat H_\lambda^{\mathrm{curv}} \approx 0$. The recommended default is the \emph{exact}
-Hessian-vector product, no harder to compute than the Gauss--Newton one, still one Pearlmutter
-pass, solved by an indefinite-tolerant method (e.g.\ MINRES, or conjugate gradients with a
-small damping term if $\widehat H_\lambda$ is found indefinite); this targets the linear system
-Theorem~\ref{thm:channels} actually specifies, with no approximation. Substituting
-$\widehat H_\lambda^{\mathrm{GN}}$ remains available as a cheaper fallback, always positive
-definite by construction, but its accuracy is regime-dependent rather than automatic:
-Proposition~\ref{prop:ggn} ties it to the classifier already separating real from recombined
-vectors well, and it can be a poor substitute otherwise, for instance for a small,
-under-trained network with large residuals $D_\beta - z$ on $P_1$, where
-$H_\lambda^{\mathrm{curv}}$ is exactly what is large.
-
-One step has no counterpart in Algorithm~\ref{alg:generic} and must be inserted after the fit:
-a numerical check of Assumption~\ref{as:smooth-mlp}. Estimate the smallest eigenvalues of
-$\widehat H_\lambda$ by Hessian-vector products and Lanczos, to detect near-singularity or
-indefiniteness, and compute the ratio
-$\|\widehat H_\lambda^{\mathrm{curv}}\|/\|\widehat H_\lambda^{\mathrm{GN}}\|$, which is what
-decides whether the cheaper Gauss--Newton solve is trustworthy. Note also that every
-$J_{\betahat_\lambda}$ in steps~7 and~12 of Algorithm~\ref{alg:generic} now costs a backward
-pass, one per Monte Carlo draw, where the logistic case only read off a fixed $\phi$.
-
-A direct empirical check of this trade-off belongs in Section~\ref{sec:simulation}: compare the
-Gauss--Newton and exact-Hessian estimates of $\IF(w;\beta_\lambda,F)$ against a finite-difference
-derivative of $\betahat_\lambda(F_\varepsilon)$ along the contamination
-path~\eqref{eq:perturbation}, as a function of the same ratio. Doing
-so turns Assumption~\ref{as:smooth-mlp} from an unverifiable hypothesis into a diagnostic with a
-quantitative threshold, in the same spirit as the finite-population check used to validate
-Theorem~\ref{thm:channels} in the logistic case.
 
 %
 % ==== COMMENTÉ (Sec. 6 frozen-representation reduction + Asymptotics) — à réactiver plus tard ====
@@ -2024,7 +1885,7 @@ Family & Treatment & What is swept & Purpose \\
 AXY (App.~\ref{app:dgp-axy}) & binary & $\mathrm{cov\_dim}(X)$ & binary treatment vs.\ confounder dimension; classical vs.\ IF-corrected cross-check ($\gps$ closed form) \\
 Linear-Gaussian (App.~\ref{app:dgp-wellspecified}) & continuous natively, binary as run & $\mathrm{cov\_dim}(Z)$ & well-specified control: the estimation-only regime, with no approximation error \\
 Four continuous models (App.~\ref{app:dgp-continuous}) & continuous, $\dim(T)$ & $\dim(X)$, $\dim(T)$ & distributional shapes; the $d$-crossover of Section~\ref{sec:discussion-simpler} \\
-Real / semi-synthetic (App.~\ref{app:dgp-real}) & binary &, & companion chapter's broader comparison \\
+Real / semi-synthetic (App.~\ref{app:dgp-real}) & binary & --- & documented for completeness; not used in this paper's own simulation study \\
 \bottomrule
 \end{tabular}
 \caption{The data-generating families of Section~\ref{sec:sim-dgp}.}
@@ -2037,11 +1898,7 @@ dimension $\mathrm{cov\_dim}(X)$ that can be swept into the thousands, the binar
 analogue of the $d$-sweep below. The closed-form $\gps$ is exactly the ingredient needed to
 compute the classical estimator~\eqref{eq:est-classical} directly and check that it agrees with
 the IF-corrected one~\eqref{eq:estimator} up to sampling error (Section~\ref{sec:sim-experiments});
-Figure~\ref{fig:dgp-toyscm-axy} shows its outcome mechanism. This degenerate, binary-treatment
-case is the smallest instance, inside this paper, of a broader observation: on the simulated AXY
-design and on real data, the companion chapter's comparison against the baselines of
-Appendix~\ref{app:glossary} finds the MCD-based estimator competitive even outside the
-continuous, multidimensional regime it targets.
+Figure~\ref{fig:dgp-toyscm-axy} shows its outcome mechanism.
 
 The \textbf{well-specified linear-Gaussian model} (Appendix~\ref{app:dgp-wellspecified}) is a
 control: a Gaussian confounder and a linear-Gaussian outcome, for which the contrast function's
@@ -2064,75 +1921,23 @@ never the confounding mechanism, can shape $p_t(y)$, which is why varying it is 
 
 Finally, the \textbf{real and semi-synthetic datasets} (IHDP, ACIC 2016/2018, HC-MNIST;
 Appendix~\ref{app:dgp-real}) that \citet{melnychuk2023flows} compare their baselines on all have
-a binary treatment; they belong to the companion, more applied chapter's broader comparison, not
-to this simulation study, which stays confined to the IF-corrected estimator and its two
-discriminants.
+a binary treatment; they are not part of this simulation study, which stays confined to the
+IF-corrected estimator and its two discriminants.
 
 \subsection{Experiments}
 \label{sec:sim-experiments}
 
-For each data-generating process, the corrected estimator~\eqref{eq:estimator} and, where
-feasible, the classical estimator~\eqref{eq:est-classical} are compared on bias and root mean
-squared error (RMSE) against
-the known $p_t(y)$, as functions of the sample size $n$; on AXY, where $\gps$
-has a closed form, the two estimates are additionally checked directly against one another, which
-they should agree with up to sampling error.
-
-Two dimensions are then swept independently, to separate the two competing effects behind the
-approximation/estimation trade-off: the feature-map dimension $\ks$, to trace the
-approximation/estimation trade-off, and the treatment dimension $d=\dim(T)$, to locate the
-crossover discussed in Section~\ref{sec:discussion-simpler}, where the contrastive route's
-advantage over the classical, kernel-based one is expected to grow. On the four continuous
-data-generating processes, the two discriminants of Sections~\ref{sec:mcd-logistic}
-and~\ref{sec:mcd-mlp} are further compared against one another on accuracy and wall-clock
-cost, and each process's own difficulty parameter, component separation for the mixture,
-degrees of freedom $\nu$ for the Student-$t$, the variance's growth rate for the heteroscedastic
-case, skewness for the last one, is varied at fixed $n$ and $d$, to see how quickly each
-discriminant's accuracy degrades as the target moves away from what a linear-in-features model
-can represent well.
-
-Every configuration is run for 50 independent replications, each an independent draw of the
-entire data-generating process from a fresh seed, not a resampling of one fixed dataset ---
-so that the resulting variance is the Monte Carlo variance of the estimator, not resampling
-variance around a single realization. Every replication's full result (bias, RMSE, wall-clock
-time, the fitted hyperparameters, and the seed that produced it) is stored individually rather
-than only its average, so that quantiles, violin plots, and a true-vs-predicted density plot for
-any single stored replication can all be produced after the fact, from the seed alone, without
-rerunning the whole configuration. Hyperparameters, $\lambda$, the Monte Carlo size $S_{\mathrm{mc}}$, and
-each discriminant's own parameters, are selected once per configuration by the
-cross-validation protocol of Appendix~\ref{app:cv} and then held fixed across all 50 replications,
-mirroring the tuning protocol of \citet{melnychuk2023flows} rather than re-tuning at every
-replication. The compute environment, and the policy governing when a run uses the GPU, are
-described in Appendix~\ref{app:compute}.
+\TODO{À compléter.}
 
 \section{Discussion}
 \label{sec:discussion}
 
-Having built and analyzed the IF-corrected estimator, we now step back to say what its
-guarantee is and is not, how to check it in practice, and how it sits in the surrounding
-literature.
+\TODO{À compléter.}
 
 \subsection{Scope of the guarantee}
 \label{sec:discussion-dr}
 
-The two estimators of this paper differ in a way that is easy to state and worth
-understanding: the classical estimator~\eqref{eq:est-classical} is doubly robust in the pair
-$\big(\gps, \pf{Y \mid T,X}\big)$, whereas the IF-corrected estimator~\eqref{eq:estimator} is
-not doubly robust. The difference is structural rather than an artefact of the derivation, and
-two facts explain it.
-
-The classical pair consists of the two legs of the identified functional, the treatment law
-and the outcome law, and double robustness is the statement that an error in one leg is
-harmless if the other is estimated well. The contrastive factorization~\eqref{eq:reformulation}
-dismantles this arrangement: it removes the treatment leg from the formula and splits the outcome
-leg into a marginal and a density ratio. What takes the place of the pair is a single fitted
-object, the contrast function, and the second-order remainder of the IF-corrected estimator is
-accordingly the \emph{square} of one nuisance error, $\|\betahat - \beta_\lambda\|^2$, rather than
-a product of two errors that could cancel. No second leg remains whose good behaviour could
-rescue a poor contrast fit.
-
-The two factors are moreover not variationally independent, so one could not treat them as an
-error-cancelling pair even in principle.
+\TODO{À compléter.}
 
 \begin{mypropo}[Normalization constraint]
 \label{prop:normalization}
@@ -2143,56 +1948,12 @@ For every $y$ with $\pf{Y}(y) > 0$,
 \end{equation}
 \end{mypropo}
 
-Appendix~\ref{app:asymptotics-normalization} proves this. The constraint holds for every $y$,
-so the contrast function is tied to the marginal through a continuum of identities, and the
-two are not free to vary independently.
-
-What the correction does provide is the removal of the first-order bias~\eqref{eq:plugin-bias}
---- which is present regardless of any pairing of nuisances, together with first-order
-insensitivity to the estimation error of $\beta$. The condition that replaces double robustness
-bears on a single object, the approximation error of the contrast model.
+Appendix~\ref{app:asymptotics-normalization} proves this.
 
 \subsection{Nature of the simplification}
 \label{sec:discussion-simpler}
 
-The contrastive route does not remove work; it changes its kind.
-
-What it removes is two objects that are hard for the same reason. The classical
-estimator~\eqref{eq:est-classical} needs $\widehat\gps(t\mid X_i)$, a conditional density on
-$\R^{d}$, and smooths it with a $d$-dimensional kernel $K_{h_T}$; Appendix~\ref{app:classical-regularity}
-requires $n h_T^{d} h_Y \to \infty$ for this to be feasible at all, and it is exactly this
-condition that a vector treatment strains. The contrastive
-estimator~\eqref{eq:estimator} needs neither: it smooths only in $y$, and its estimation error
-is governed by $\|\betahat - \beta_\lambda\|^2$, a parametric
-rate for a fixed-dimensional $\beta$. Removing the treatment-coordinate kernel is at least as
-much of the gain as removing $\gps$ by name; the two are the same difficulty, since $\gps$ is
-precisely what made that kernel necessary.
-
-What it adds: computing $\IF(w;\contrast,F)$ requires
-the three-channel score~\eqref{eq:channels}, a Hessian $H_\lambda$, and, in closed form, one
-linear solve per evaluation point (Corollary~\ref{cor:collapse}). Weighed purely in operations,
-this is not obviously cheaper than fitting $\widehat\gps$; what makes it cheaper is that it is
-a computation over a $\ks$-dimensional object rather than an estimation problem on
-$\R^{d}$, a difference in kind, not just in constant.
-
-That the added machinery turns out to be cheap is a property of the logistic discriminant, not
-of the contrastive route in general. It is cheap here because $\score(w;\beta)$ has the closed
-form~\eqref{eq:S}, $H_\lambda$ is a single average factorized once, and $b_{TX},b_Y$ are plain
-Monte Carlo averages of an already-computed quantity (Section~\ref{sec:mcd-logistic-closed-form}).
-None of this is automatic: for the neural-network discriminant $H_\lambda$ can fail to be
-invertible at all, and the tractable substitute requires conjugate-gradient solves and an
-unverifiable local regularity assumption (Section~\ref{sec:mcd-mlp-ggn}). Penalized logistic
-regression is the instance for which the trade is unambiguously favourable.
-
-Two qualifications remain even in that favourable case. First, the double robustness given up
-above matters: with the treatment leg gone, nothing rescues the estimator if $\phi$ is
-misspecified, and the correction's validity rests on the single quantity
-$\|D_{\beta_\lambda} - \contrast\|_{L_2}$, where the classical
-route has two independent chances to be right. Second, the case for the trade grows with $d$. At
-$d=1$, with $\gps$ itself simple to estimate, the classical route needs no high-dimensional
-kernel to begin with, keeps double robustness, and the comparison may favour it. The contrastive
-route's advantage is specific to the high-dimensional, vector-treatment regime this paper
-targets, not universal.
+\TODO{À compléter.}
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -3243,7 +3004,7 @@ Y \mid T=t,Z=z \ \sim\ \mathcal N\big(a^\top z + b^\top t,\ \sigma^2\big),
 with $T$ continuous and of any dimension in this design's native form, matching the treatment this
 paper targets; the runs of Section~\ref{sec:sim-experiments} constrain it to a binary $T$ only
 because the baselines of Appendix~\ref{app:glossary} it is compared against there require a
-discrete treatment, exactly the reason AXY is binary, not a limitation of the design itself.
+discrete treatment; the design itself supports a continuous one.
 Since $\mathrm{do}(T=t)$ severs $Z\to T$, $Z$ reverts to its own marginal exactly as in
 Appendix~\ref{app:dgp-continuous}, giving
 \begin{equation}
@@ -3287,7 +3048,7 @@ Section~\ref{sec:sim-dgp}, that is the only part of the model that can change th
 $p_t(y)$.
 
 Each of the four adds exactly one feature a jointly Gaussian $(X,T,Y)$ cannot produce, and each
-feature is chosen because a purely Gaussian, linear-in-$(t,x)$ specification of $Y\mid T,X$ ---
+feature is chosen because a purely Gaussian, linear-in-$(t,x)$ specification of $Y\mid T,X$,
 the assumption underlying a plug-in built on a conditional mean and a constant-variance noise
 model, represents it either not at all or only by contorting the mean and variance to
 compensate. Together the four probe whether the discriminant can recover a shape a mean-and-variance
@@ -3385,9 +3146,9 @@ $\delta' = \delta\,\omega/\omega'$, and $\lambda' = \delta'/\sqrt{1-\delta'^2}$.
 recovers the symmetric, Gaussian case; $|\lambda|$ large gives strong asymmetry. Unlike the
 heteroscedastic and multimodal models, whose parameters move the mean or the variance of
 $Y\mid T,X$ with $t$, $\lambda$ leaves both fixed and shifts only the third moment, the same
-isolation the heavy-tailed model performs one moment up, for kurtosis rather than skewness ---
-so sweeping $\lambda$ tests whether a discriminant can pick up an asymmetry that a location-scale
-comparison would miss entirely.
+isolation the heavy-tailed model performs one moment up, for kurtosis rather than skewness.
+Sweeping $\lambda$ therefore tests whether a discriminant can pick up an asymmetry that a
+location-scale comparison would miss entirely.
 
 \begin{figure}[htbp]
 \centering
@@ -3421,17 +3182,16 @@ only at the smallest dimension.
 \subsection{Real and semi-synthetic datasets}
 \label{app:dgp-real}
 
-Four further datasets appear in Section~\ref{sec:intro} and in the companion, more applied
-chapter's broader comparison against the baselines of Appendix~\ref{app:glossary}, but not in
-this paper's own simulation study; they are documented here for completeness, since none of them
+Four further datasets appear in Section~\ref{sec:intro}, but not in this paper's own
+simulation study; they are documented here for completeness, since none of them
 is otherwise defined in the main text. All four have a binary treatment, real or semi-synthetic
 covariates, and simulated (hence known) potential outcomes, which is what makes them usable for
 interventional density estimation benchmarking despite being real-data-based. IHDP \citep{hill2011ihdp} pairs $25$ real
 covariates from a randomized early-intervention study for low-birth-weight infants
-($n\approx 747$) with two simulated response surfaces; its role in the companion chapter's
-comparison is the opposite of AXY's covariate-dimension sweep above, a small, fixed, realistic
-$n$ and $\dim(X)$, where every method has enough data to be estimated reasonably well and the
-comparison is not dominated by a dimensionality effect. ACIC 2016 \citep{dorie2019acic2016} and
+($n\approx 747$) with two simulated response surfaces; it has a small, fixed, realistic
+$n$ and $\dim(X)$, the opposite of AXY's covariate-dimension sweep above, where every method has
+enough data to be estimated reasonably well and the comparison is not dominated by a
+dimensionality effect. ACIC 2016 \citep{dorie2019acic2016} and
 ACIC 2018 \citep{shimoni2018acic2018} are collections of, respectively, $77$ and $24$
 semi-synthetic datasets built from real covariates (linked birth and infant death records, for
 2018) under a range of simulated outcome-generating mechanisms, designed as a data-analysis
@@ -3462,7 +3222,7 @@ the held-out \emph{factual} log-likelihood,
 \label{eq:cv-loglik}
 \end{equation}
 each term evaluated at the observation's own factual $(T_i,Y_i)$, never at a counterfactual value.
-Because $\widehat p_t(y)$ is marginal in $t$, it does not condition on $X$ by construction ---
+Because $\widehat p_t(y)$ is marginal in $t$, it does not condition on $X$ by construction;
 \eqref{eq:cv-loglik} ignores $X_i$ entirely, an intentional weakening relative to a
 criterion that could condition on it (as the flow/TARNet baselines' own nuisance tuning does);
 what it keeps is the property that matters here, shared with the cross-entropy originally
@@ -3535,9 +3295,8 @@ full grid size.
 \label{app:cv-baselines}
 
 The \textsc{infs+}, \textsc{infs}, \textsc{cnf}, \textsc{cnf+ts}, \textsc{tarnet*}, \textsc{mdn}
-and \textsc{dkme} baselines of Appendix~\ref{app:glossary} are not tuned by this paper; the
-comparison against them belongs to the companion, more applied chapter noted in
-Section~\ref{sec:intro}. Table~\ref{tab:baseline-grids} reproduces, for reference, the grid
+and \textsc{dkme} baselines of Appendix~\ref{app:glossary} are not tuned by this paper.
+Table~\ref{tab:baseline-grids} reproduces, for reference, the grid
 \citet{melnychuk2023flows} tune them on (their Appendix G, Table 5), verbatim except for
 abbreviations. \textsc{kde} is tuned by \citet{kim2018distributional}'s own criterion, a
 weighted sum of the outcome mean-squared error and the propensity cross-entropy
@@ -3653,8 +3412,8 @@ CPU & GPU & Notes \\
 
 \paragraph{GPU policy.} Both discriminants share the same numerical core
 (Newton solve, Hessian, Cholesky factorization, three-channel score;
-Remark~\ref{rem:impl-logistic}), which runs transparently on whichever device, CPU or CUDA
---- is resolved once at construction time. Whether that should be a GPU is decided per
+Remark~\ref{rem:impl-logistic}), which runs transparently on whichever device, CPU or CUDA,
+is resolved once at construction time. Whether that should be a GPU is decided per
 configuration from direct measurement, not assumed from the discriminant, since throughput and
 problem size interact non-monotonically. Table~\ref{tab:compute-gpu} gives the measurements
 behind that decision, each a single-configuration comparison on a Tesla P4-class GPU against
@@ -3687,10 +3446,10 @@ from the Monte Carlo channels, which are memory-capped independently of $\ks$ by
 The rule of thumb: below about a minute of single-core wall-clock time, kernel-launch and
 host-device transfer costs are not amortized and a GPU measures \emph{slower} than the $4$ CPU
 cores it would otherwise occupy; above that threshold, the GPU wins, by a margin that grows
-with the problem size $\ks$. This threshold, not the discriminant's identity, decides
-the GPU policy for every cell of the dimension sweeps in Section~\ref{sec:sim-experiments}:
+with the problem size $\ks$. This threshold decides the GPU policy for every cell of the
+dimension sweeps in Section~\ref{sec:sim-experiments}, independently of which discriminant is used:
 small-$\ks$ configurations run on CPU, and the high-dimensional end of every sweep, exactly
-the regime Section~\ref{sec:discussion-simpler} argues the contrastive route is meant for ---
+the regime Section~\ref{sec:discussion-simpler} argues the contrastive route is meant for,
 runs on GPU whenever available.
 
 \section{Abbreviations and notation}
